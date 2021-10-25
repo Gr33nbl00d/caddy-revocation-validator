@@ -1,0 +1,31 @@
+{
+  "client_authentication": {
+    "trusted_ca_certs_pem_files": [
+      "./certificates/ca.crt",
+      "./certificates/ca2.crt"
+    ],
+    "mode": "require_and_verify",
+    "revocation_check": {
+      "mode": "prefer_ocsp,prefer_crl",
+      "crl_config": {
+        "crl_work_dir": "./crls",
+        "crl_storage": "memory,disk",
+        "crl_signature_validation_mode": "none,verify_log,verify",
+        "trusted_signature_cert_files": [
+          "./certificates/crlca.crt"
+        ],
+        "crl_url_locations": [
+          "http://server/my.crl"
+        ],
+        "crl_file_locations": [
+          "./crls/my.crl"
+        ],
+        "crl_update_interval": "10m",
+        "cdp_support": {
+          "cdp_fetch": "never,fetch_actively,fetch_background",
+          "cdp_crl_required": true
+        }
+      }
+    }
+  }
+}
