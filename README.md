@@ -23,7 +23,7 @@ Till that point at least manual SW-QA tests will be performed. Automatic tests w
 # Motivation
 
 After i found out that most webservers even the famous nginx are not really compliant to the official RFC specs My goal is to get a full RFC compliant high performant client certificate revocation
-support which also supports big CRL list without running full of memory.
+support which also supports big CRL list without running out of memory.
 
 # Requirements
 
