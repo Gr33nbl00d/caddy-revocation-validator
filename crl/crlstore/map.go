@@ -4,9 +4,9 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
-	"github.com/gr33nbl00d/caddy-tls-clr/core"
-	"github.com/gr33nbl00d/caddy-tls-clr/core/hashing"
-	"github.com/gr33nbl00d/caddy-tls-clr/crl/crlreader"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/hashing"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
 	"go.uber.org/zap"
 	"math/big"
 )

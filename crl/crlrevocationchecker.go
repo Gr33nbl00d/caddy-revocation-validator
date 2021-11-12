@@ -2,9 +2,9 @@ package crl
 
 import (
 	"crypto/x509"
-	"github.com/gr33nbl00d/caddy-tls-clr/config"
-	"github.com/gr33nbl00d/caddy-tls-clr/core"
-	"github.com/gr33nbl00d/caddy-tls-clr/crl/crlrepository"
+	"github.com/gr33nbl00d/caddy-revocation-validator/config"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlrepository"
 	"go.uber.org/zap"
 	"log"
 	"runtime/debug"
@@ -50,6 +50,7 @@ func (c *CRLRevocationChecker) Provision(crlConfig *config.CRLConfig, logger *za
 	if crlConfig.StorageTypeParsed == config.Disk {
 		db = crlrepository.LevelDB
 	}
+	//todo check if directory is already in use
 	c.crlRepository = crlrepository.NewCRLRepository(c.logger.Named("revocation"), crlConfig, db)
 	c.crlRepository.DeleteTempFilesIfExist()
 	chains := core.NewCertificateChains(nil, crlConfig.TrustedSignatureCerts)

@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/gr33nbl00d/caddy-tls-clr/core"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core"
 	"go.uber.org/zap"
 	"strings"
 	"time"

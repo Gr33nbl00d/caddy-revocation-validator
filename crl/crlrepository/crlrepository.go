@@ -4,12 +4,12 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/gr33nbl00d/caddy-tls-clr/config"
-	"github.com/gr33nbl00d/caddy-tls-clr/core"
-	"github.com/gr33nbl00d/caddy-tls-clr/core/asn1parser"
-	"github.com/gr33nbl00d/caddy-tls-clr/crl/crlloader"
-	"github.com/gr33nbl00d/caddy-tls-clr/crl/crlreader"
-	"github.com/gr33nbl00d/caddy-tls-clr/crl/crlstore"
+	"github.com/gr33nbl00d/caddy-revocation-validator/config"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/asn1parser"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlloader"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlstore"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -83,8 +83,10 @@ func (R *Repository) AddCRL(crlLocations *core.CRLLocations, chains *core.Certif
 	if err != nil {
 		return false, fmt.Errorf("could not calculate crl location identifier: %v", err)
 	}
-	entry, crlAdded := R.getOrAddEntry(identifier, loader, chains)
-
+	entry, crlAdded, err := R.getOrAddEntry(identifier, loader, chains)
+	if err != nil {
+		return false, err
+	}
 	if R.crlConfig.CDPConfig.CRLFetchModeParsed == config.CRLFetchModeActively {
 		if isEntryLoaded(entry) == false {
 			return crlAdded, R.loadActively(entry, chains, crlLocations)
@@ -106,15 +108,18 @@ func isEntryLoaded(entry *Entry) bool {
 	return entry.Loaded
 }
 
-func (R *Repository) getOrAddEntry(identifier string, loader crlloader.CRLLoader, chains *core.CertificateChains) (*Entry, bool) {
+func (R *Repository) getOrAddEntry(identifier string, loader crlloader.CRLLoader, chains *core.CertificateChains) (*Entry, bool, error) {
 	R.crlRepositoryLock.Lock()
 	defer R.crlRepositoryLock.Unlock()
 	entry := R.crlRepository[identifier]
 	if entry == nil {
-		entry, _ = R.addNewEmptyEntry(loader, identifier, chains)
-		return entry, true
+		entry, err := R.addNewEmptyEntry(loader, identifier, chains)
+		if err != nil {
+			return entry, false, err
+		}
+		return entry, true, nil
 	} else {
-		return entry, false
+		return entry, false, nil
 	}
 }
 

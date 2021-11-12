@@ -8,8 +8,8 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
-	"github.com/gr33nbl00d/caddy-tls-clr/core/asn1parser"
-	"github.com/gr33nbl00d/caddy-tls-clr/crl/crlreader/extensionsupport"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/asn1parser"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader/extensionsupport"
 )
 
 type CertificateChains struct {

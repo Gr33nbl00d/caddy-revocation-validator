@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/gr33nbl00d/caddy-tls-clr/config"
+	"github.com/gr33nbl00d/caddy-revocation-validator/config"
 	"io/ioutil"
 	"time"
 )

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
-	"github.com/gr33nbl00d/caddy-tls-clr/config"
-	"github.com/gr33nbl00d/caddy-tls-clr/crl"
-	"github.com/gr33nbl00d/caddy-tls-clr/ocsp"
+	"github.com/gr33nbl00d/caddy-revocation-validator/config"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl"
+	"github.com/gr33nbl00d/caddy-revocation-validator/ocsp"
 	"go.uber.org/zap"
 	"os"
 )
@@ -31,7 +31,9 @@ type CertRevocationValidator struct {
 func (c CertRevocationValidator) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "tls.client_cert_validators.revocation",
-		New: func() caddy.Module { return new(CertRevocationValidator) },
+		New: func() caddy.Module {
+			return new(CertRevocationValidator)
+		},
 	}
 }
 

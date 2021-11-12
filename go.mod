@@ -1,4 +1,4 @@
-module github.com/gr33nbl00d/caddy-tls-clr
+module github.com/gr33nbl00d/caddy-revocation-validator
 
 go 1.16
 

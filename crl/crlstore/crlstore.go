@@ -2,8 +2,8 @@ package crlstore
 
 import (
 	"crypto/x509/pkix"
-	"github.com/gr33nbl00d/caddy-tls-clr/core"
-	"github.com/gr33nbl00d/caddy-tls-clr/crl/crlreader"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
 	"math/big"
 )
 

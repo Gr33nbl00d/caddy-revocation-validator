@@ -2,7 +2,7 @@ package crlloader
 
 import (
 	"fmt"
-	"github.com/gr33nbl00d/caddy-tls-clr/core/utils"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
 	"go.uber.org/zap"
 	"io"
 	"os"
