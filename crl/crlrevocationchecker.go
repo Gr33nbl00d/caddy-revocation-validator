@@ -2,6 +2,7 @@ package crl
 
 import (
 	"crypto/x509"
+	"fmt"
 	"github.com/gr33nbl00d/caddy-revocation-validator/config"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlrepository"
@@ -44,17 +45,20 @@ func (c *CRLRevocationChecker) IsRevoked(clientCertificate *x509.Certificate, ve
 }
 
 func (c *CRLRevocationChecker) Provision(crlConfig *config.CRLConfig, logger *zap.Logger) error {
+	err := RegisterCRLWorkDirUsage(crlConfig)
+	if err != nil {
+		return err
+	}
 	c.crlConfig = crlConfig
 	c.logger = logger
 	db := crlrepository.Map
 	if crlConfig.StorageTypeParsed == config.Disk {
 		db = crlrepository.LevelDB
 	}
-	//todo check if directory is already in use
 	c.crlRepository = crlrepository.NewCRLRepository(c.logger.Named("revocation"), crlConfig, db)
 	c.crlRepository.DeleteTempFilesIfExist()
 	chains := core.NewCertificateChains(nil, crlConfig.TrustedSignatureCerts)
-	err := c.addCrlUrlsFromConfig(chains)
+	err = c.addCrlUrlsFromConfig(chains)
 	if err != nil {
 		return err
 	}
@@ -67,6 +71,13 @@ func (c *CRLRevocationChecker) Provision(crlConfig *config.CRLConfig, logger *za
 }
 
 func (c *CRLRevocationChecker) Cleanup() error {
+	if c.crlConfig != nil {
+		DeregisterCRLWorkDirUsage(c.crlConfig)
+	}
+	if c.crlRepository != nil {
+		c.crlRepository.Close()
+	}
+
 	if c.crlUpdateTicker != nil {
 		c.crlUpdateTicker.Stop()
 	}
@@ -157,7 +168,25 @@ func (c *CRLRevocationChecker) updateWasRecentlyFinished() bool {
 	return (!lastCrlUpdateFinishTime.IsZero() && (time.Since(lastCrlUpdateFinishTime) < c.crlConfig.UpdateIntervalParsed/2))
 }
 
+func RegisterCRLWorkDirUsage(crlConfig *config.CRLConfig) error {
+	workDirInUseMutex.Lock()
+	defer workDirInUseMutex.Unlock()
+	if workDirsInUse[crlConfig.WorkDir] == 1 {
+		return fmt.Errorf("The same work dir %s was defined for multiple servers", crlConfig.WorkDir)
+	}
+	workDirsInUse[crlConfig.WorkDir] = 1
+	return nil
+}
+
+func DeregisterCRLWorkDirUsage(crlConfig *config.CRLConfig) {
+	workDirInUseMutex.Lock()
+	defer workDirInUseMutex.Unlock()
+	workDirsInUse[crlConfig.WorkDir] = 0
+}
+
 var (
+	workDirsInUse           map[string]int = make(map[string]int)
+	workDirInUseMutex       sync.Mutex
 	crlUpdateMutex          sync.Mutex
 	lastCrlUpdateFinishTime time.Time
 )

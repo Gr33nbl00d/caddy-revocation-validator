@@ -535,3 +535,14 @@ func (R *Repository) UpdateCRL(crlLocations *core.CRLLocations, chains *core.Cer
 	}
 	return nil
 }
+
+func (R *Repository) Close() {
+	R.crlRepositoryLock.Lock()
+	defer R.crlRepositoryLock.Unlock()
+	for id, entry := range R.crlRepository {
+		entry.entryLock.Lock()
+		defer entry.entryLock.Unlock()
+		entry.CRLStore.Close()
+		R.crlRepository[id] = nil
+	}
+}
