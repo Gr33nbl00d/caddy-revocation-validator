@@ -30,7 +30,7 @@ type CertRevocationValidator struct {
 
 func (c CertRevocationValidator) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "tls.client_cert_validators.revocation",
+		ID:  "tls.client_auth.revocation",
 		New: func() caddy.Module {
 			return new(CertRevocationValidator)
 		},
@@ -142,5 +142,5 @@ func isCRLCheckingEnabled(c *CertRevocationValidator) bool {
 var (
 	_ caddy.Provisioner            = (*CertRevocationValidator)(nil)
 	_ caddy.CleanerUpper           = (*CertRevocationValidator)(nil)
-	_ caddytls.ClientCertValidator = (*CertRevocationValidator)(nil)
+	_ caddytls.ClientCertificateVerifier = (*CertRevocationValidator)(nil)
 )
