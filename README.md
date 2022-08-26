@@ -34,59 +34,63 @@ defined
 
 Minimal config for OCSP and CRL support via CDP/AIA
 
-              "client_authentication": {
-                "trusted_ca_certs_pem_files": [
-                  "./certificates/ca.pem",
-                ],
-                "mode": "require_and_verify",
-				"verifiers": [
-					{
-						"verifier" : "revocation",
-						"mode" : "prefer_ocsp",
-						"crl_config": {
-						  "work_dir": "./crlworkdir"
-						},
-						"ocsp_config": {
-							"default_cache_duration" : "10m",
-						}
-					}
-				]
-              }
+```json
+"client_authentication": {
+"trusted_ca_certs_pem_files": [
+  "./certificates/ca.pem",
+],
+"mode": "require_and_verify",
+		"verifiers": [
+			{
+				"verifier" : "revocation",
+				"mode" : "prefer_ocsp",
+				"crl_config": {
+				  "work_dir": "./crlworkdir"
+				},
+				"ocsp_config": {
+					"default_cache_duration" : "10m",
+				}
+			}
+		]
+}
+```
 
 # Full Config Example
 
-              "client_authentication": {
-                "trusted_ca_certs_pem_files": [
-                  "./certificates/ca.pem",
-                ],
-                "mode": "require_and_verify",
-				"verifiers": [
-					{
-						"verifier" : "revocation",
-						"mode" : "prefer_ocsp",
-						"crl_config": {
-						  "work_dir": "./crlworkdir",
-						  "storage_type" : "memory",
-						  "update_interval" : "1m",			  
-						  "signature_validation_mode" : "verify",
-						  "crl_files" : ["./customcrls/custom.crl.pem"],
-						  "crl_urls" : ["http://myserver/custom.crl.pem"],
-						  "trusted_signature_certs_files" :["./certificates/customcacert.pem"],
-						  "cdp_config": {
-							"crl_fetch_mode" : "fetch_actively",
-							"crl_cdp_strict" : true
-						  }
-						},
-						"ocsp_config": {
-							"default_cache_duration" : "1m",
-								"trusted_responder_certs_files": [								
-								"./certificates/responderca.crt"
-							],
-                            "ocsp_aia_strict" : true
-						}
-					}
-				]
-              }
+```json
+"client_authentication": {
+"trusted_ca_certs_pem_files": [
+  "./certificates/ca.pem",
+],
+"mode": "require_and_verify",
+		"verifiers": [
+			{
+				"verifier" : "revocation",
+				"mode" : "prefer_ocsp",
+				"crl_config": {
+				  "work_dir": "./crlworkdir",
+				  "storage_type" : "memory",
+				  "update_interval" : "1m",			  
+				  "signature_validation_mode" : "verify",
+				  "crl_files" : ["./customcrls/custom.crl.pem"],
+				  "crl_urls" : ["http://myserver/custom.crl.pem"],
+				  "trusted_signature_certs_files" :["./certificates/customcacert.pem"],
+				  "cdp_config": {
+					"crl_fetch_mode" : "fetch_actively",
+					"crl_cdp_strict" : true
+				  }
+				},
+				"ocsp_config": {
+					"default_cache_duration" : "1m",
+						"trusted_responder_certs_files": [								
+						"./certificates/responderca.crt"
+					],
+	    "ocsp_aia_strict" : true
+				}
+			}
+		]
+}
+```
 
 # Config Structure
 ## mode
