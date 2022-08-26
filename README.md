@@ -39,9 +39,9 @@ Minimal config for OCSP and CRL support via CDP/AIA
                   "./certificates/ca.pem",
                 ],
                 "mode": "require_and_verify",
-				"validators": [
+				"verifiers": [
 					{
-						"validator" : "revocation",
+						"verifier" : "revocation",
 						"mode" : "prefer_ocsp",
 						"crl_config": {
 						  "work_dir": "./crlworkdir"
@@ -60,9 +60,9 @@ Minimal config for OCSP and CRL support via CDP/AIA
                   "./certificates/ca.pem",
                 ],
                 "mode": "require_and_verify",
-				"validators": [
+				"verifiers": [
 					{
-						"validator" : "revocation",
+						"verifier" : "revocation",
 						"mode" : "prefer_ocsp",
 						"crl_config": {
 						  "work_dir": "./crlworkdir",
