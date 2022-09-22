@@ -3,9 +3,6 @@
 This caddy plugin enables revocation check support for client certificates.
 In your caddy json file revocation support can bet added by adding a validator to your client_authentication section.
 
-This plugin is still in an early phase and can be considered beta. However it will get into production by end of the year on a big "unnamed customer"
-Till that point at least manual SW-QA tests will be performed. Automatic tests will be added in first quarter of 2022
-
 # Features
 
 * OCSP & CRL support
@@ -27,9 +24,8 @@ support which also supports big CRL list without running out of memory.
 
 # Requirements
 
-To enable this plugin it is currently required to merge the following pull request in caddy
-https://github.com/caddyserver/caddy/pull/4389
-As soon as an official caddy version including this pull request is out. The minimum version will be defined here
+To enable this plugin it is required to use the latest build from master. As currently no release is supporting this plugin yet.
+As soon as an official caddy version out. The minimum version will be defined here
 
 # Getting started
 
@@ -38,59 +34,63 @@ defined
 
 Minimal config for OCSP and CRL support via CDP/AIA
 
-              "client_authentication": {
-                "trusted_ca_certs_pem_files": [
-                  "./certificates/ca.pem",
-                ],
-                "mode": "require_and_verify",
-				"validators": [
-					{
-						"validator" : "revocation",
-						"mode" : "prefer_ocsp",
-						"crl_config": {
-						  "work_dir": "./crlworkdir"
-						},
-						"ocsp_config": {
-							"default_cache_duration" : "10m",
-						}
-					}
-				]
-              }
+```json
+"client_authentication": {
+"trusted_ca_certs_pem_files": [
+  "./certificates/ca.pem",
+],
+"mode": "require_and_verify",
+		"verifiers": [
+			{
+				"verifier" : "revocation",
+				"mode" : "prefer_ocsp",
+				"crl_config": {
+				  "work_dir": "./crlworkdir"
+				},
+				"ocsp_config": {
+					"default_cache_duration" : "10m",
+				}
+			}
+		]
+}
+```
 
 # Full Config Example
 
-              "client_authentication": {
-                "trusted_ca_certs_pem_files": [
-                  "./certificates/ca.pem",
-                ],
-                "mode": "require_and_verify",
-				"validators": [
-					{
-						"validator" : "revocation",
-						"mode" : "prefer_ocsp",
-						"crl_config": {
-						  "work_dir": "./crlworkdir",
-						  "storage_type" : "memory",
-						  "update_interval" : "1m",			  
-						  "signature_validation_mode" : "verify",
-						  "crl_files" : ["./customcrls/custom.crl.pem"],
-						  "crl_urls" : ["http://myserver/custom.crl.pem"],
-						  "trusted_signature_certs_files" :["./certificates/customcacert.pem"],
-						  "cdp_config": {
-							"crl_fetch_mode" : "fetch_actively",
-							"crl_cdp_strict" : true
-						  }
-						},
-						"ocsp_config": {
-							"default_cache_duration" : "1m",
-								"trusted_responder_certs_files": [								
-								"./certificates/responderca.crt"
-							],
-                            "ocsp_aia_strict" : true
-						}
-					}
-				]
-              }
+```json
+"client_authentication": {
+"trusted_ca_certs_pem_files": [
+  "./certificates/ca.pem",
+],
+"mode": "require_and_verify",
+		"verifiers": [
+			{
+				"verifier" : "revocation",
+				"mode" : "prefer_ocsp",
+				"crl_config": {
+				  "work_dir": "./crlworkdir",
+				  "storage_type" : "memory",
+				  "update_interval" : "1m",			  
+				  "signature_validation_mode" : "verify",
+				  "crl_files" : ["./customcrls/custom.crl.pem"],
+				  "crl_urls" : ["http://myserver/custom.crl.pem"],
+				  "trusted_signature_certs_files" :["./certificates/customcacert.pem"],
+				  "cdp_config": {
+					"crl_fetch_mode" : "fetch_actively",
+					"crl_cdp_strict" : true
+				  }
+				},
+				"ocsp_config": {
+					"default_cache_duration" : "1m",
+						"trusted_responder_certs_files": [								
+						"./certificates/responderca.crt"
+					],
+	    "ocsp_aia_strict" : true
+				}
+			}
+		]
+}
+```
 
 # Config Structure
 ## mode
