@@ -27,6 +27,17 @@ support which also supports big CRL list without running out of memory.
 Minum supported caddy version is 2.5.2
 
 # Getting started
+## Installation
+You first need to build a new caddy executable with this plugin.
+The easiest way is to do this with xcaddy.
+
+Install xcaddy :
+
+```go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest```
+
+After xcaddy installation you can build caddy with this plugin by executing:
+
+```xcaddy build v2.6.1 --with github.com/gr33nbl00d/caddy-revocation-validator```
 
 The easiest way to use this plugin is to enable client revocation support via CDP and AIA certificate extensions. This requires that the client certificates has either CDP or AIA or both extensions
 defined
