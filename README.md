@@ -92,10 +92,10 @@ Minimal config for OCSP and CRL support via CDP/AIA
 				},
 				"ocsp_config": {
 					"default_cache_duration" : "1m",
-						"trusted_responder_certs_files": [								
+			                "trusted_responder_certs_files": [								
 						"./certificates/responderca.crt"
 					],
-	    "ocsp_aia_strict" : true
+	                                "ocsp_aia_strict" : true
 				}
 			}
 		]
