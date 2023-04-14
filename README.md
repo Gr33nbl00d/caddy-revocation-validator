@@ -133,7 +133,7 @@ Possible Values:
 >memory
 >
 > Description: Stores CRL entries in a memory based map (very fast but memory consumption of caddy depends on CRL size).
-> For most use cases CRLs do not grow that much, it should be ok for most use cases
+> For most use cases where CRLs do not grow that much, it should be ok.
 > Memory usage of caddy for a CRL with 1 million entries is about 500mb
 > This is recommended for systems with typical sized CRLs and typical server memory  
 
