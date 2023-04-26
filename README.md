@@ -1,7 +1,7 @@
 # Caddy Client Certificate Revocation Validator Plugin
 
 This caddy plugin enables revocation check support for client certificates.
-In your caddy json file revocation support can bet added by adding a validator to your client_authentication section.
+In your caddy json file revocation support can bet added by adding a verifier to your client_authentication section.
 
 # Features
 
@@ -24,10 +24,20 @@ support which also supports big CRL list without running out of memory.
 
 # Requirements
 
-To enable this plugin it is required to use the latest build from master. As currently no release is supporting this plugin yet.
-As soon as an official caddy version out. The minimum version will be defined here
+Minum supported caddy version is 2.5.2
 
 # Getting started
+## Installation
+You first need to build a new caddy executable with this plugin.
+The easiest way is to do this with xcaddy.
+
+Install xcaddy :
+
+```go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest```
+
+After xcaddy installation you can build caddy with this plugin by executing:
+
+```xcaddy build v2.6.1 --with github.com/gr33nbl00d/caddy-revocation-validator```
 
 The easiest way to use this plugin is to enable client revocation support via CDP and AIA certificate extensions. This requires that the client certificates has either CDP or AIA or both extensions
 defined
@@ -82,10 +92,10 @@ Minimal config for OCSP and CRL support via CDP/AIA
 				},
 				"ocsp_config": {
 					"default_cache_duration" : "1m",
-						"trusted_responder_certs_files": [								
+			                "trusted_responder_certs_files": [								
 						"./certificates/responderca.crt"
 					],
-	    "ocsp_aia_strict" : true
+	                                "ocsp_aia_strict" : true
 				}
 			}
 		]
@@ -123,7 +133,7 @@ Possible Values:
 >memory
 >
 > Description: Stores CRL entries in a memory based map (very fast but memory consumption of caddy depends on CRL size).
-> For most use cases CRLs do not grow that much, it should be ok for most use cases
+> For most use cases where CRLs do not grow that much, it should be ok.
 > Memory usage of caddy for a CRL with 1 million entries is about 500mb
 > This is recommended for systems with typical sized CRLs and typical server memory  
 
