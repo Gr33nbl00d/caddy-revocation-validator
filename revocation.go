@@ -17,6 +17,7 @@ func init() {
 	caddy.RegisterModule(CertRevocationValidator{})
 }
 
+// CertRevocationValidator Allows checking of client certificate revocation status based on CRL or OCSP
 type CertRevocationValidator struct {
 	Mode                  string             `json:"mode"`
 	CRLConfig             *config.CRLConfig  `json:"crl_config,omitempty"`
@@ -30,7 +31,7 @@ type CertRevocationValidator struct {
 
 func (c CertRevocationValidator) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "tls.client_auth.revocation",
+		ID: "tls.client_auth.revocation",
 		New: func() caddy.Module {
 			return new(CertRevocationValidator)
 		},
@@ -140,7 +141,7 @@ func isCRLCheckingEnabled(c *CertRevocationValidator) bool {
 
 // Interface guards
 var (
-	_ caddy.Provisioner            = (*CertRevocationValidator)(nil)
-	_ caddy.CleanerUpper           = (*CertRevocationValidator)(nil)
+	_ caddy.Provisioner                  = (*CertRevocationValidator)(nil)
+	_ caddy.CleanerUpper                 = (*CertRevocationValidator)(nil)
 	_ caddytls.ClientCertificateVerifier = (*CertRevocationValidator)(nil)
 )
