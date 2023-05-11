@@ -1,6 +1,6 @@
 module github.com/gr33nbl00d/caddy-revocation-validator
 
-go 1.18
+go 1.19
 
 require (
 	github.com/caddyserver/caddy/v2 v2.6.4
