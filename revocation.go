@@ -19,8 +19,13 @@ func init() {
 
 // CertRevocationValidator Allows checking of client certificate revocation status based on CRL or OCSP
 type CertRevocationValidator struct {
-	Mode                  string             `json:"mode"`
-	CRLConfig             *config.CRLConfig  `json:"crl_config,omitempty"`
+	// Mode defines the "Revocation Check Mode"
+	// Supported Values 'prefer_ocsp', 'prefer_crl', 'ocsp_only', 'crl_only', 'disabled'
+	// See https://github.com/Gr33nbl00d/caddy-revocation-validator#mode
+	Mode string `json:"mode"`
+	// CRLConfig Contains the certificate revocation list configuration (Optional)
+	CRLConfig *config.CRLConfig `json:"crl_config,omitempty"`
+	// OCSPConfig Contains the Online Certificate Status Protocol configuration (Optional)
 	OCSPConfig            *config.OCSPConfig `json:"ocsp_config,omitempty"`
 	logger                *zap.Logger
 	ctx                   caddy.Context

@@ -123,13 +123,26 @@ Possible Values:
 >
 > Description: Only check CRLs if present, ignores all OCSP servers defined by AIA or config
 
+>disabled
+>
+> Description: Disables revocation checking
+
 ## crl_config
-Configures the CRL checking
+Certificate Revocation List Configuration (Optional)
 ### work_dir
 Configures the working directory for temporary CRL downloads and for disk based persistent CRLs
 ### storage_type
-Configures how to store CRLs
-Possible Values:
+Configures how to store CRLs locally
+Supported Values:
+>disk
+>
+> Description: Stores CRL entries in a level db based file (still fast but slower than memory).
+> Disk is the default for CRL persistence.
+> Access times measured for a 1 million entry CRL was 1 millisecond
+> Memory usage of caddy is not dependent on CRL size
+> This is recommended for systems with giant CRLs or servers with low memory
+> 
+
 >memory
 >
 > Description: Stores CRL entries in a memory based map (very fast but memory consumption of caddy depends on CRL size).
@@ -137,15 +150,8 @@ Possible Values:
 > Memory usage of caddy for a CRL with 1 million entries is about 500mb
 > This is recommended for systems with typical sized CRLs and typical server memory  
 
->disk
->
-> Description: Stores CRL entries in a level db based file (still fast but slower than memory).
-> Access times measured for a 1 million entry CRL was 1 millisecond
-> Memory usage of caddy is not dependent on CRL size
-> This is recommended for systems with giant CRLs or servers with low memory
-
 ### update_interval
-The interval in which the already known CRLs will be updated.
+The interval in which the already known CRLs will be updated. (Optional) (Default: 30 minutes)
 Valid time units are “ns”, “us” (or “µs”), “ms”, “s”, “m”, “h”
 
 See: https://pkg.go.dev/time#ParseDuration
@@ -153,7 +159,7 @@ See: https://pkg.go.dev/time#ParseDuration
 ### signature_validation_mode
 Configures the signature validation or the CRL
 
-Possible Values:
+Supported Values:
 >none
 >
 > Description: Do not verify the signature
@@ -168,24 +174,26 @@ Possible Values:
 
 
 ### crl_urls 
-A predefined list of http(s) urls pointing to CRLs. These lists will be checked for all client certificates.
+(Optional) A predefined list of http(s) urls pointing to CRLs. These lists will be checked for all client certificates.
 The predefined CRLs will be loaded on startup and updated cyclic.
 PEM and DER encoding are both supported
 
 ### crl_files
-A predefined list of files pointing to CRLs. These lists will be checked for all client certificates.
+(Optional) A predefined list of files pointing to CRLs. These lists will be checked for all client certificates.
 The predefined CRLs will be loaded on startup
 PEM and DER encoding are both supported
 
 ### trusted_signature_certs_files
-A predefined list of files of CA certificates which are trusted for CRL signing.
-These certificates will be used to verify CRL signature if the CRL signature cert is not part of the client cert chain
+(Optional) A predefined list of files of CA certificates which are trusted for CRL signing.
+These certificates will be used to verify CRL signature if the CRL signature cert is not part of the client cert chain.
+If the signature cert is part of the client cert chain there is no need to configure a certificate here.
 PEM and DER encoding are both supported
 
 ### cdp_config
-Configures how CDP entries are used
+Configures how CDP (Certificate Distribution Point Extension) entries in the client certificate are used
 
 #### crl_fetch_mode
+Configures how and when CRLs are downloaded for the first time
 Possible Values:
 >fetch_actively
 >
@@ -198,19 +206,28 @@ Possible Values:
 > Description: If a CRL defined in a client cert CDP is not known/loaded during handshake download will be triggered in background
 
 #### crl_cdp_strict
+Configures if CRL checking is mandatory to allow a connection if CDP is defined (Optional) (Default: false)
 In strict mode it is required that if a CDP is defined inside the certificate.
 The CRL needs to be downloaded from one of the CDP locations and needs to be checked to gain access
 If the CRL can not be downloaded, the validation of the crl signature failed (see signature_validation_mode),
 or the CRL is not downloaded yet (see crl_fetch_mode) connection is denied.
 
 ## ocsp_config
+Configures OCSP revocation checks
 ### default_cache_duration
 The default time to cache OCSP responses valid time units are “ns”, “us” (or “µs”), “ms”, “s”, “m”, “h”
 If the default time is zero no caching will be performed.
 If the OCSP responder has defined a "NextUpdate" time the caching time will be time from now on till the next update,
 in this case default_cache_duration will be ignored
 
+## trusted_responder_certs_files
+(Optional) A predefined list of files of CA certificates which are trusted to verify the OCSP response signature.
+These certificates will be used to verify OCSP response signature if the ocsp response signature cert is not part of the client cert chain.
+If the signature cert is part of the client cert chain there is no need to configure a certificate here.
+PEM and DER encoding are both supported
+
 ### ocsp_aia_strict
+Configures if OCSP checking is mandatory to allow a connection if AIA is defined (Optional) (Default: false)
 In strict mode it is required that if an OCSP server is defined inside AIA extension at least
 one OCSP server defined can be contacted to check for revocation. Or a valid response of one of the OCSP server is inside the cache 
 If no OCSP server can be contacted and no cached response is present or the validation of the OCSP response signature failed connection is denied.
