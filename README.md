@@ -18,7 +18,7 @@ In your caddy json file revocation support can bet added by adding a verifier to
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
 
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Gr33nbl00d_caddy-revocation-validator)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+<!--[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Gr33nbl00d_caddy-revocation-validator)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)-->
 
 # Features
 
