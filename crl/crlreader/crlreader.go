@@ -325,8 +325,7 @@ func readAlgorithmIdentifier(reader asn1parser.Asn1Reader) (*pkix.AlgorithmIdent
 
 func newHashingDERCRLReader(crlFile *os.File) hashing.HashingReaderWrapper {
 	var reader = hashing.HashingReaderWrapper{
-		Reader:    bufio.NewReader(crlFile),
-		Signature: "",
+		Reader: bufio.NewReader(crlFile),
 	}
 	return reader
 }
@@ -336,8 +335,7 @@ func newHashingPEMCRLReader(crlFile *os.File) hashing.HashingReaderWrapper {
 	decoder := base64.NewDecoder(base64.RawStdEncoding, &pemReader)
 
 	var reader = hashing.HashingReaderWrapper{
-		Reader:    bufio.NewReader(decoder),
-		Signature: "",
+		Reader: bufio.NewReader(decoder),
 	}
 	return reader
 

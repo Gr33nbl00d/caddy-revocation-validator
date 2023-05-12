@@ -10,7 +10,6 @@ import (
 
 type HashingReaderWrapper struct {
 	Reader             *bufio.Reader
-	Signature          string
 	CalculateSignature bool
 	hash               hash.Hash
 }

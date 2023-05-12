@@ -7,6 +7,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/muesli/cache2go v0.0.0-20221011235721-518229cd8021
 	github.com/smallstep/assert v0.0.0-20200723003110-82e2b9b3b262
+	github.com/stretchr/testify v1.8.2
 	github.com/syndtr/goleveldb v1.0.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.8.0
@@ -26,6 +27,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/badger v1.6.2 // indirect
 	github.com/dgraph-io/badger/v2 v2.2007.4 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
@@ -70,6 +72,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/ginkgo/v2 v2.9.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.15.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
