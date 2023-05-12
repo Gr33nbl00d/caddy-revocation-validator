@@ -43,6 +43,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          
+      - name: Test
+        run: go test -v ./... -json > testReport.json
+
+      - name: Test Coverage
+        run: go test -v ./... -covermode=atomic -coverprofile=coverage.out
+        
       - name: Analyze with SonarCloud
 
         # You can pin the exact commit or the version.
@@ -59,10 +70,13 @@ jobs:
             -Dsonar.projectKey=Gr33nbl00d_caddy-revocation-validator
             -Dsonar.organization=gr33nbl00d
             -Dsonar.sources=.
-            -Dsonar.tests=.
+            -Dsonar.sources.inclusions=**/*.go
+            -Dsonar.sources.exclusions=**/*_test.go
+            -Dsonar.tests=.            
             -Dsonar.test.inclusions=**/*_test.go
             -Dsonar.go.coverage.reportPaths=coverage.out
             -Dsonar.go.tests.reportPaths=testReport.json
+            -Dsonar.verbose=true
             # Comma-separated paths to directories containing main source files.
             #-Dsonar.sources= # optional, default is project base directory
             # When you need the analysis to take place in a directory other than the one from which it was launched

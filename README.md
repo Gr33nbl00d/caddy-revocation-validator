@@ -4,7 +4,8 @@ This caddy plugin enables revocation check support for client certificates.
 In your caddy json file revocation support can bet added by adding a verifier to your client_authentication section.
 
 # Code Quality Status
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Gr33nbl00d_caddy-revocation-validator)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+[![Build](https://github.com/Gr33nbl00d/caddy-revocation-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Gr33nbl00d/caddy-revocation-validator/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Gr33nbl00d/caddy-revocation-validator/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Gr33nbl00d/caddy-revocation-validator/actions/workflows/github-code-scanning/codeql)
 
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
@@ -16,6 +17,8 @@ In your caddy json file revocation support can bet added by adding a verifier to
 [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Gr33nbl00d_caddy-revocation-validator)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
 
 # Features
 
