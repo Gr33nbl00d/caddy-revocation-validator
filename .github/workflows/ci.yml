@@ -48,5 +48,8 @@ jobs:
       - name: Build
         run: go build -v ./...
 
-      - name: Build
-        run: go test -v ./...
+      - name: Test
+        run: go test -v ./... -json > testReport.json
+
+      - name: Test Coverage
+        run: go test -v ./... -covermode=atomic -coverprofile=coverage.out
