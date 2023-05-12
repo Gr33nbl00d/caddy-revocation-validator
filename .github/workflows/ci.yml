@@ -47,3 +47,6 @@ jobs:
 
       - name: Build
         run: go build -v ./...
+
+      - name: Build
+        run: go test -v ./...
