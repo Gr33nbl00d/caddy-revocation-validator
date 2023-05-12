@@ -58,8 +58,10 @@ jobs:
             # mandatory
             -Dsonar.projectKey=Gr33nbl00d_caddy-revocation-validator
             -Dsonar.organization=gr33nbl00d
-            -Dsonar.sources=**/*.go
-            -Dsonar.tests=**/*
+            -Dsonar.sources=.
+            -Dsonar.sources.inclusions=**/*.go
+            -Dsonar.sources.exclusions=**/*_test.go
+            -Dsonar.tests=.            
             -Dsonar.test.inclusions=**/*_test.go
             -Dsonar.go.coverage.reportPaths=coverage.out
             -Dsonar.go.tests.reportPaths=testReport.json
