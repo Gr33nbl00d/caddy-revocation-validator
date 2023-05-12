@@ -3,6 +3,20 @@
 This caddy plugin enables revocation check support for client certificates.
 In your caddy json file revocation support can bet added by adding a verifier to your client_authentication section.
 
+# Code Quality Status
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Gr33nbl00d_caddy-revocation-validator)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Gr33nbl00d_caddy-revocation-validator&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Gr33nbl00d_caddy-revocation-validator)
+
 # Features
 
 * OCSP & CRL support
@@ -248,5 +262,4 @@ Some technical debt:
 * Add Unit Tests
 * Add automatic Integration Tests
 * CI/CD
-* Static Code Analysis
 * Automatic dependency updates
