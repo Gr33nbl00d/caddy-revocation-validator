@@ -33,7 +33,7 @@ func (p *PemReader) readNextBase64Line(byteData []byte) (int, error) {
 		return p.readNextBase64Line(byteData)
 	} else {
 		if len(readString) > pemMaxLineLength {
-			return 0, fmt.Errorf("line was longer than 64 characters %s", matchString)
+			return 0, fmt.Errorf("line was longer than 64 characters %s", readString)
 		} else {
 			i := copy(byteData, readString)
 			return i, nil
