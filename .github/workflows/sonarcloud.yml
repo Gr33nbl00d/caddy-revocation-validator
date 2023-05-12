@@ -47,6 +47,13 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+          
+      - name: Test
+        run: go test -v ./... -json > testReport.json
+
+      - name: Test Coverage
+        run: go test -v ./... -covermode=atomic -coverprofile=coverage.out
+        
       - name: Analyze with SonarCloud
 
         # You can pin the exact commit or the version.
