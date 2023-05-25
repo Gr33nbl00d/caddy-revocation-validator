@@ -264,5 +264,4 @@ Some technical debt:
 
 * Add Unit Tests
 * Add automatic Integration Tests
-* CI/CD
 * Automatic dependency updates
