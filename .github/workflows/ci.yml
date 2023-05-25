@@ -49,6 +49,9 @@ jobs:
         run: go build -v ./...
 
       - name: Test
+        run: go test -v ./...
+
+      - name: Test Report
         run: go test -v ./... -json > testReport.json
 
       - name: Test Coverage
