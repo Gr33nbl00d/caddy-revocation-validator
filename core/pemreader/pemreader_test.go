@@ -55,7 +55,7 @@ func TestPemReader_Read(t *testing.T) {
 	testFile, err := os.Open(testhelper.GetTestDataFilePath("crl1.pem"))
 	assert.Nil(t, err)
 	reader := NewPemReader(bufio.NewReader(testFile))
-	allBytes, err := readAllBytes(reader)
+	allBytes, err := readAllBytes(t, reader)
 	assert.Nil(t, err)
 	hasher := sha1.New()
 
@@ -68,7 +68,7 @@ func TestPemReader_ReadWithInvalidFile(t *testing.T) {
 	testFile, err := os.Open(testhelper.GetTestDataFilePath("invalidcrl1.pem"))
 	assert.Nil(t, err)
 	reader := NewPemReader(bufio.NewReader(testFile))
-	_, err = readAllBytes(reader)
+	_, err = readAllBytes(nil, reader)
 	assert.Error(t, err)
 }
 
@@ -81,7 +81,7 @@ func TestPemReader_ReadWithInvalidBuffer(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func readAllBytes(reader PemReader) (readData []byte, err error) {
+func readAllBytes(t *testing.T, reader PemReader) (readData []byte, err error) {
 	buf := &bytes.Buffer{}
 	for {
 		var readBuffer = make([]byte, 66)
@@ -94,6 +94,7 @@ func readAllBytes(reader PemReader) (readData []byte, err error) {
 		if err != nil {
 			return nil, err
 		}
+		t.Logf("Read bytes: %s", hex.EncodeToString(readBuffer[0:read]))
 		buf.Write(readBuffer[0:read])
 	}
 }
