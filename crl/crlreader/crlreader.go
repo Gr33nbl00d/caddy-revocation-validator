@@ -107,19 +107,19 @@ func ReadCRL(crlProcessor CRLProcessor, crlFilePath string) (*CRLReadResult, err
 	if err != nil {
 		return nil, err
 	}
-	var nextUpdate *time.Time
+	var nextUpdate time.Time
 	if nextUpdateTimeExists(reader) {
 		utcTime, err := asn1parser.ReadUtcTime(&reader)
 		if err != nil {
 			return nil, err
 		}
-		nextUpdate = utcTime
+		nextUpdate = *utcTime
 	}
 
 	metaInfo := CRLMetaInfo{
 		*issuer,
 		*thisUpdate,
-		*nextUpdate,
+		nextUpdate,
 	}
 	err = crlProcessor.StartUpdateCrl(&metaInfo)
 	if err != nil {
