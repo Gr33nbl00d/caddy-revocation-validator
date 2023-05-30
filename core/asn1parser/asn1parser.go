@@ -29,7 +29,7 @@ type TagLength struct {
 	Length Length
 }
 
-//Complete length in byte of the tlv record
+// Complete length in byte of the tlv record
 func (l TagLength) CalculateTLVLength() *big.Int {
 	sum := big.NewInt(0)
 	lengthSizeBigInt := big.NewInt(int64(l.Length.LengthSize))
@@ -39,14 +39,14 @@ func (l TagLength) CalculateTLVLength() *big.Int {
 	return sum
 }
 
-//Complete length in byte of value
+// Complete length in byte of value
 func (l TagLength) CalculateValueLength() *big.Int {
 	sum := big.NewInt(0)
 	sum = sum.Add(sum, &l.Length.Length)
 	return sum
 }
 
-//Complete length in byte of length of the value
+// Complete length in byte of length of the value
 func (l TagLength) CalculateTLLength() *big.Int {
 	sum := big.NewInt(0)
 	lengthSizeBigInt := big.NewInt(int64(l.Length.LengthSize))
@@ -297,7 +297,11 @@ func copyBytes(targetBytes *[]byte, bytesToAdd []byte, targetBytePosition int, c
 func PeekExpectedBytes(reader Asn1Reader, byteSize int, offset int) ([]byte, error) {
 	read, err := reader.Peek(byteSize + offset)
 	if err != nil {
-		return nil, err
+		if err == io.EOF {
+			return nil, fmt.Errorf("end of file reached while still expecting bytes %v", err)
+		} else {
+			return nil, err
+		}
 	}
 	readBytes := make([]byte, byteSize)
 	copiedBytes := copy(readBytes[:], read[offset:(offset+byteSize)])
