@@ -3,12 +3,15 @@ package asn1parser
 import (
 	"bufio"
 	"bytes"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/hex"
+	"github.com/gr33nbl00d/caddy-revocation-validator/testhelper"
 	"github.com/smallstep/assert"
 	asn1crypto "golang.org/x/crypto/cryptobyte/asn1"
 	"math/big"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -629,6 +632,86 @@ func TestParseRDNSequence(t *testing.T) {
 			pkix.AttributeTypeAndValue{Type: oidCommonName, Value: "McAfee SIA Signing Certificate Authority"},
 		}}
 	result, err := ParseRDNSequence(byteData)
+	assert.Nil(t, err)
+	assert.Equals(t, expectedResult.String(), result.String())
+}
+
+func TestParseRDNSequenceInvalidData(t *testing.T) {
+	byteData, err := hex.DecodeString("048181310B3009060355040613025553310B3009060355040813024F523112301006035504071309426561766572746F6E310D300B060355040B1304534D4255310F300D060355040A13064D63416665653131302F060355040313284D634166656520534941205369676E696E6720436572746966696361746520417574686F72697479")
+	assert.Nil(t, err)
+	_, err = ParseRDNSequence(byteData)
+	assert.NotNil(t, err)
+	assert.Equals(t, "unexpected tag. Expected: 48 but found 4", err.Error())
+}
+
+func TestParseIssuerRDNSequence(t *testing.T) {
+	var (
+		oidCountry      = []int{2, 5, 4, 6}
+		oidOrganization = []int{2, 5, 4, 10}
+		oidCommonName   = []int{2, 5, 4, 3}
+		stateProvince   = []int{2, 5, 4, 8}
+	)
+	expectedResult := pkix.RDNSequence{
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{Type: oidCountry, Value: "UK"},
+		},
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{Type: stateProvince, Value: "Test-State"},
+		},
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{Type: oidOrganization, Value: "Golang Tests"},
+		},
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{Type: oidCommonName, Value: "test-file"},
+		}}
+
+	crtFile, err := os.Open(testhelper.GetTestDataFilePath("testcert.der"))
+	assert.Nil(t, err)
+	defer crtFile.Close()
+	if err != nil {
+		t.Errorf("error occured %v", err)
+	}
+	crtBytes, err := os.ReadFile(crtFile.Name())
+	assert.Nil(t, err)
+	cert, err := x509.ParseCertificate(crtBytes)
+	assert.Nil(t, err)
+	result, err := ParseIssuerRDNSequence(cert)
+	assert.Nil(t, err)
+	assert.Equals(t, expectedResult.String(), result.String())
+}
+
+func TestParseSubjectRDNSequence(t *testing.T) {
+	var (
+		oidCountry      = []int{2, 5, 4, 6}
+		oidOrganization = []int{2, 5, 4, 10}
+		oidCommonName   = []int{2, 5, 4, 3}
+		stateProvince   = []int{2, 5, 4, 8}
+	)
+	expectedResult := pkix.RDNSequence{
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{Type: oidCountry, Value: "UK"},
+		},
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{Type: stateProvince, Value: "Test-State"},
+		},
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{Type: oidOrganization, Value: "Golang Tests"},
+		},
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{Type: oidCommonName, Value: "test-file"},
+		}}
+
+	crtFile, err := os.Open(testhelper.GetTestDataFilePath("testcert.der"))
+	assert.Nil(t, err)
+	defer crtFile.Close()
+	if err != nil {
+		t.Errorf("error occured %v", err)
+	}
+	crtBytes, err := os.ReadFile(crtFile.Name())
+	assert.Nil(t, err)
+	cert, err := x509.ParseCertificate(crtBytes)
+	assert.Nil(t, err)
+	result, err := ParseSubjectRDNSequence(cert)
 	assert.Nil(t, err)
 	assert.Equals(t, expectedResult.String(), result.String())
 }
