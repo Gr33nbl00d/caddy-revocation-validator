@@ -5,7 +5,7 @@ import (
 	"crypto"
 	"fmt"
 	"hash"
-	"os"
+	"io"
 )
 
 type HashingReaderWrapper struct {
@@ -45,8 +45,8 @@ func (t *HashingReaderWrapper) FinishHashCalculation() []byte {
 	return t.hash.Sum(nil)
 }
 
-func (t HashingReaderWrapper) Reset(file *os.File) {
-	t.Reader.Reset(file)
+func (t HashingReaderWrapper) Reset(reader io.Reader) {
+	t.Reader.Reset(reader)
 }
 
 func (t HashingReaderWrapper) Discard(offset int64) error {
