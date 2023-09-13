@@ -47,6 +47,7 @@ func (c CertRevocationValidator) CaddyModule() caddy.ModuleInfo {
 func (c *CertRevocationValidator) Provision(ctx caddy.Context) error {
 	c.ctx = ctx
 	c.logger = ctx.Logger(c)
+	c.logger.Info("start provisioning of caddy revocation validator")
 	if isCRLCheckingEnabled(c) {
 		c.crlRevocationChecker = &crl.CRLRevocationChecker{}
 	}
@@ -55,21 +56,24 @@ func (c *CertRevocationValidator) Provision(ctx caddy.Context) error {
 	if err != nil {
 		return err
 	}
+	c.logger.Info("validating Config")
 	err = validateConfig(c)
 	if err != nil {
 		return err
 	}
 	if isCRLCheckingEnabled(c) {
+		c.logger.Info("crl checking was enabled start CRL provisioning")
 		err = c.crlRevocationChecker.Provision(c.CRLConfig, c.logger)
 		if err != nil {
 			return err
 		}
 	}
+	c.logger.Info("start ocsp provisioning")
 	err = c.ocspRevocationChecker.Provision(c.OCSPConfig, c.logger)
 	if err != nil {
 		return err
 	}
-
+	c.logger.Info("finished provisioning of caddy revocation validator")
 	return nil
 }
 

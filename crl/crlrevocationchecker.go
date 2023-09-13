@@ -55,8 +55,11 @@ func (c *CRLRevocationChecker) Provision(crlConfig *config.CRLConfig, logger *za
 	if crlConfig.StorageTypeParsed == config.Disk {
 		db = crlrepository.LevelDB
 	}
+	logger.Info("creating crl repository of type " + crlrepository.StoreTypeToString(db))
 	c.crlRepository = crlrepository.NewCRLRepository(c.logger.Named("revocation"), crlConfig, db)
 	c.crlRepository.DeleteTempFilesIfExist()
+
+	logger.Info("creating crl certificate chains")
 	chains := core.NewCertificateChains(nil, crlConfig.TrustedSignatureCerts)
 	err = c.addCrlUrlsFromConfig(chains)
 	if err != nil {
@@ -66,6 +69,7 @@ func (c *CRLRevocationChecker) Provision(crlConfig *config.CRLConfig, logger *za
 	if err != nil {
 		return err
 	}
+	logger.Info("Initializing CRL update ticker")
 	c.initCRLUpdateTicker()
 	return nil
 }

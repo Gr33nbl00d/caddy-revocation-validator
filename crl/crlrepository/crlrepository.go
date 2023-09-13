@@ -43,6 +43,17 @@ const (
 	LevelDB StoreType = 1
 )
 
+func StoreTypeToString(storeType StoreType) string {
+	switch storeType {
+	case LevelDB:
+		return "Level DB"
+	case Map:
+		return "Map"
+	default:
+		return fmt.Sprintf("unknown store type %d", storeType)
+	}
+}
+
 func NewCRLRepository(logger *zap.Logger, crlConfig *config.CRLConfig, storeType StoreType) *Repository {
 	factory, err := createStoreFactory(storeType, crlConfig.WorkDir, logger)
 	if err != nil {

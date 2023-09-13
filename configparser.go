@@ -12,7 +12,9 @@ import (
 const defaultCRLUpdateInterval = 30 * time.Minute
 
 func ParseConfig(certRevocationValidator *CertRevocationValidator) error {
+	certRevocationValidator.logger.Info("parsing caddy revocation validator config")
 	if certRevocationValidator.CRLConfig != nil {
+		certRevocationValidator.logger.Info("parsing crl config")
 		err := parseCRLConfig(certRevocationValidator.CRLConfig)
 		if err != nil {
 			return err
@@ -20,6 +22,7 @@ func ParseConfig(certRevocationValidator *CertRevocationValidator) error {
 	}
 
 	if certRevocationValidator.OCSPConfig != nil {
+		certRevocationValidator.logger.Info("parsing ocsp config")
 		err := parseOCSPConfig(certRevocationValidator.OCSPConfig)
 		if err != nil {
 			return err
@@ -32,6 +35,7 @@ func ParseConfig(certRevocationValidator *CertRevocationValidator) error {
 			DefaultCacheDurationParsed: 0,
 		}
 	}
+	certRevocationValidator.logger.Info("parsing mode")
 	err := parseMode(certRevocationValidator)
 	if err != nil {
 		return err
