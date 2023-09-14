@@ -641,7 +641,7 @@ func TestParseRDNSequenceInvalidData(t *testing.T) {
 	assert.Nil(t, err)
 	_, err = ParseRDNSequence(byteData)
 	assert.NotNil(t, err)
-	assert.Equals(t, "unexpected tag. Expected: 48 but found 4", err.Error())
+	assert.Equals(t, "could not parse the RDNSequence: unexpected tag. Expected: 48 but found 4", err.Error())
 }
 
 func TestParseIssuerRDNSequence(t *testing.T) {
