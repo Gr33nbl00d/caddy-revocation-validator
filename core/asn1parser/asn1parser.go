@@ -427,7 +427,7 @@ func ParseRDNSequence(rdnData []byte) (*pkix.RDNSequence, error) {
 	reader := bufio.NewReader(bytes.NewReader(rdnData))
 	err := ReadStruct(reader, rdnObject)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse the RDNSequence: %v", err)
 	}
 	return rdnObject, nil
 }

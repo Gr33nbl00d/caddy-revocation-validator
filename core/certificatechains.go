@@ -77,7 +77,7 @@ func NewCertificateChainsFromEntry(chainEntry *CertificateChainEntry) *Certifica
 	return chains
 }
 
-//Implemenation according to rfc5280 section 5.2.1
+// Implemenation according to rfc5280 section 5.2.1
 func FindCertificateIssuerCandidates(issuer *pkix.RDNSequence, extensions *[]pkix.Extension, algorithmID x509.PublicKeyAlgorithm, chains *CertificateChains) ([]*CertificateChainEntry, error) {
 	keyIdentifierExtension := extensionsupport.FindExtension(extensionsupport.OidCertExtAuthorityKeyId, extensions)
 	if keyIdentifierExtension == nil {
@@ -132,7 +132,7 @@ func findCertificateBySerialAndIssuer(identifier *extensionsupport.AuthorityKeyI
 
 					certCandidateIssuer, err := asn1parser.ParseIssuerRDNSequence(certCandidate.Certificate)
 					if err != nil {
-						return nil, err
+						return nil, fmt.Errorf("failed to parse issuer rdn sequence from certificate %v", err)
 					}
 
 					if certCandidateIssuer.String() == authorityCertIssuerDN.String() {
