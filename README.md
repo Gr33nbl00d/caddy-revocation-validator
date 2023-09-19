@@ -1,7 +1,7 @@
 # Caddy Client Certificate Revocation Validator Plugin
 
 This caddy plugin enables revocation check support for client certificates.
-In your caddy json file revocation support can bet added by adding a verifier to your client_authentication section.
+In your caddy json file revocation support can be added by adding a verifier to your client_authentication section.
 
 # Code Quality Status
 [![Build](https://github.com/Gr33nbl00d/caddy-revocation-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/Gr33nbl00d/caddy-revocation-validator/actions/workflows/ci.yml)
@@ -262,6 +262,6 @@ Some features are still missing:
 
 Some technical debt:
 
-* Add Unit Tests
+* Improve Unit Test coverage to 80%
 * Add automatic Integration Tests
 * Automatic dependency updates
