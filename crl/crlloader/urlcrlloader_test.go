@@ -56,6 +56,34 @@ func (suite *URLLoaderSuite) TestLoadCRL() {
 	assert.Equal(suite.T(), mockCRLContent, string(downloadedCRLData), "Downloaded CRL content doesn't match")
 }
 
+func (suite *URLLoaderSuite) TestLoadCRLWithInvalidUrl() {
+	// Create a temporary directory to store the downloaded CRL
+	tmpDir, err := ioutil.TempDir("", "test-crl-dir-")
+	assert.NoError(suite.T(), err, "Error creating temporary directory")
+	defer os.RemoveAll(tmpDir)
+
+	// Create a mock HTTP server that serves the CRL content
+	mockCRLContent := "Mock CRL Data"
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(mockCRLContent))
+	}))
+	defer mockServer.Close()
+
+	// Create a URLLoader instance
+	urlLoader := URLLoader{
+		UrlString: "httppppp:dsdsd",
+		Logger:    suite.logger,
+	}
+
+	// Define the path to save the downloaded CRL
+	downloadFilePath := filepath.Join(tmpDir, "downloaded-crl.crl")
+
+	// Call the LoadCRL method
+	err = urlLoader.LoadCRL(downloadFilePath)
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "unsupported protocol")
+}
+
 func (suite *URLLoaderSuite) TestGetCRLLocationIdentifier() {
 	// Create a URLLoader instance
 	urlLoader := URLLoader{

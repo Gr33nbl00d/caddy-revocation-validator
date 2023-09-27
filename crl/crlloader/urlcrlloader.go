@@ -46,7 +46,7 @@ func (L URLLoader) GetDescription() string {
 }
 
 func (L URLLoader) downloadCRL(url string, filePath string) error {
-	crlFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_EXCL|os.O_CREATE, 0600)
+	crlFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
