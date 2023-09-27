@@ -49,11 +49,9 @@ func (f MultiSchemesCRLLoader) GetCRLLocationIdentifier() (string, error) {
 }
 
 func (f MultiSchemesCRLLoader) GetDescription() string {
-	builder := strings.Builder{}
+	var descriptions []string
 	for _, loader := range f.Loaders {
-		description := loader.GetDescription()
-		builder.WriteString(description)
-		builder.WriteString(", ")
+		descriptions = append(descriptions, loader.GetDescription())
 	}
-	return builder.String()
+	return strings.Join(descriptions, ", ")
 }
