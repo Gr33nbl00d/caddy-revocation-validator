@@ -6,6 +6,7 @@ import (
 	"github.com/gr33nbl00d/caddy-revocation-validator/config"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlrepository"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlstore"
 	"go.uber.org/zap"
 	"log"
 	"runtime/debug"
@@ -51,12 +52,15 @@ func (c *CRLRevocationChecker) Provision(crlConfig *config.CRLConfig, logger *za
 	}
 	c.crlConfig = crlConfig
 	c.logger = logger
-	db := crlrepository.Map
+	db := crlstore.Map
 	if crlConfig.StorageTypeParsed == config.Disk {
-		db = crlrepository.LevelDB
+		db = crlstore.LevelDB
 	}
-	logger.Info("creating crl repository of type " + crlrepository.StoreTypeToString(db))
-	c.crlRepository = crlrepository.NewCRLRepository(c.logger.Named("revocation"), crlConfig, db)
+	logger.Info("creating crl repository of type " + crlstore.StoreTypeToString(db))
+	err, c.crlRepository = crlrepository.NewCRLRepository(c.logger.Named("revocation"), crlConfig, db)
+	if err != nil {
+		return err
+	}
 	c.crlRepository.DeleteTempFilesIfExist()
 
 	logger.Info("creating crl certificate chains")

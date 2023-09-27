@@ -30,7 +30,8 @@ func (C CRLPersisterProcessorMock) UpdateCRLLocations(crlLocations *revocation.C
 	return nil
 }
 func TestReadCRL(t *testing.T) {
-	result, err := ReadCRL(CRLPersisterProcessorMock{}, testhelper.GetTestDataFilePath("crl1.crl"))
+	reader := StreamingCRLFileReader{}
+	result, err := reader.ReadCRL(CRLPersisterProcessorMock{}, testhelper.GetTestDataFilePath("crl1.crl"))
 	assert.Nil(t, err)
 	t.Logf("%v", result)
 

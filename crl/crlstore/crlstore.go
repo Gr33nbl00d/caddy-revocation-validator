@@ -2,8 +2,10 @@ package crlstore
 
 import (
 	"crypto/x509/pkix"
+	"fmt"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
+	"go.uber.org/zap"
 	"math/big"
 )
 
@@ -31,4 +33,21 @@ type CRLStore interface {
 
 type Factory interface {
 	CreateStore(identifier string, temporary bool) (CRLStore, error)
+}
+
+func CreateStoreFactory(storeType StoreType, repoBaseDir string, logger *zap.Logger) (Factory, error) {
+	if storeType == Map {
+		return MapStoreFactory{
+			Serializer: ASN1Serializer{},
+			Logger:     logger,
+		}, nil
+	} else if storeType == LevelDB {
+		return LevelDbStoreFactory{
+			Serializer: ASN1Serializer{},
+			BasePath:   repoBaseDir,
+			Logger:     logger,
+		}, nil
+	} else {
+		return nil, fmt.Errorf("unknown store type %d", storeType)
+	}
 }

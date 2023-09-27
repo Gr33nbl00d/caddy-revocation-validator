@@ -23,6 +23,8 @@ type Repository struct {
 	crlRepository     map[string]*Entry
 	crlConfig         *config.CRLConfig
 	logger            *zap.Logger
+	crlLoaderFactory  crlloader.CRLLoaderFactory
+	crlReader         crlreader.CRLReader
 }
 
 type Entry struct {
@@ -36,57 +38,24 @@ type Entry struct {
 	Chains *core.CertificateChains
 }
 
-type StoreType int32
-
-const (
-	Map     StoreType = 0
-	LevelDB StoreType = 1
-)
-
-func StoreTypeToString(storeType StoreType) string {
-	switch storeType {
-	case LevelDB:
-		return "Level DB"
-	case Map:
-		return "Map"
-	default:
-		return fmt.Sprintf("unknown store type %d", storeType)
-	}
-}
-
-func NewCRLRepository(logger *zap.Logger, crlConfig *config.CRLConfig, storeType StoreType) *Repository {
-	factory, err := createStoreFactory(storeType, crlConfig.WorkDir, logger)
+func NewCRLRepository(logger *zap.Logger, crlConfig *config.CRLConfig, storeType crlstore.StoreType) (error, *Repository) {
+	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger)
 	if err != nil {
-		panic(err)
+		return err, nil
 	}
 	repository := Repository{factory,
 		&sync.RWMutex{},
 		make(map[string]*Entry),
 		crlConfig,
 		logger,
+		crlloader.DefaultCRLLoaderFactory{},
+		crlreader.StreamingCRLFileReader{},
 	}
-	return &repository
-}
-
-func createStoreFactory(storeType StoreType, repoBaseDir string, logger *zap.Logger) (crlstore.Factory, error) {
-	if storeType == Map {
-		return crlstore.MapStoreFactory{
-			Serializer: crlstore.ASN1Serializer{},
-			Logger:     logger,
-		}, nil
-	} else if storeType == LevelDB {
-		return crlstore.LevelDbStoreFactory{
-			Serializer: crlstore.ASN1Serializer{},
-			BasePath:   repoBaseDir,
-			Logger:     logger,
-		}, nil
-	} else {
-		return nil, fmt.Errorf("unknown store type %d", storeType)
-	}
+	return nil, &repository
 }
 
 func (R *Repository) AddCRL(crlLocations *core.CRLLocations, chains *core.CertificateChains) (bool, error) {
-	loader, err := crlloader.CreatePreferredCrlLoader(crlLocations, R.logger)
+	loader, err := R.crlLoaderFactory.CreatePreferredCrlLoader(crlLocations, R.logger)
 	if err != nil {
 		return false, err
 	}
@@ -99,7 +68,7 @@ func (R *Repository) AddCRL(crlLocations *core.CRLLocations, chains *core.Certif
 		return false, err
 	}
 	if R.crlConfig.CDPConfig.CRLFetchModeParsed == config.CRLFetchModeActively {
-		if isEntryLoaded(entry) == false {
+		if R.isEntryLoaded(entry) == false {
 			return crlAdded, R.loadActively(entry, chains, crlLocations)
 		}
 	}
@@ -113,7 +82,7 @@ func (R *Repository) AddCRL(crlLocations *core.CRLLocations, chains *core.Certif
 	return crlAdded, nil
 }
 
-func isEntryLoaded(entry *Entry) bool {
+func (R *Repository) isEntryLoaded(entry *Entry) bool {
 	entry.entryLock.Lock()
 	defer entry.entryLock.Unlock()
 	return entry.Loaded
@@ -126,10 +95,13 @@ func (R *Repository) getOrAddEntry(identifier string, loader crlloader.CRLLoader
 	if entry == nil {
 		entry, err := R.addNewEmptyEntry(loader, identifier, chains)
 		if err != nil {
+			//crl was not added because of error
 			return entry, false, err
 		}
+		//crl was added
 		return entry, true, nil
 	} else {
+		//crl already existed
 		return entry, false, nil
 	}
 }
@@ -164,7 +136,7 @@ func (R *Repository) loadCRL(entry *Entry, chains *core.CertificateChains) (err 
 		return err
 	}
 	var processor = crlstore.CRLPersisterProcessor{CRLStore: entry.CRLStore}
-	result, err := crlreader.ReadCRL(processor, tempFileName)
+	result, err := R.crlReader.ReadCRL(processor, tempFileName)
 	if err != nil {
 		return err
 	}
@@ -218,7 +190,7 @@ func (R *Repository) createTempFile() (string, error) {
 
 func (R *Repository) IsRevoked(certificate *x509.Certificate, locations *core.CRLLocations) (*core.RevocationStatus, error) {
 	if locations != nil {
-		loader, err := crlloader.CreatePreferredCrlLoader(locations, R.logger)
+		loader, err := R.crlLoaderFactory.CreatePreferredCrlLoader(locations, R.logger)
 		if err != nil {
 			return nil, err
 		}
@@ -292,7 +264,7 @@ func (R *Repository) updateCRL(identifier string) error {
 	entry := R.getEntrySync(identifier)
 	if entry != nil {
 		R.logger.Debug("updating crl from " + entry.CRLLoader.GetDescription())
-		if isEntryLoaded(entry) == false {
+		if R.isEntryLoaded(entry) == false {
 			return R.loadCRL(entry, entry.Chains)
 		} else {
 			return R.updateCrlEntry(entry, nil)
@@ -326,7 +298,7 @@ func (R *Repository) updateCrlEntry(entry *Entry, newChains *core.CertificateCha
 	if chains == nil {
 		chains = storedChains
 	}
-	loader, err := crlloader.CreatePreferredCrlLoader(points, R.logger)
+	loader, err := R.crlLoaderFactory.CreatePreferredCrlLoader(points, R.logger)
 	if err != nil {
 		return err
 	}
@@ -350,7 +322,7 @@ func (R *Repository) updateCrlEntry(entry *Entry, newChains *core.CertificateCha
 		return err
 	}
 
-	result, err := crlreader.ReadCRL(processor, tempFileName)
+	result, err := R.crlReader.ReadCRL(processor, tempFileName)
 	if err != nil {
 		return err
 	}
@@ -529,7 +501,7 @@ func (R *Repository) loadActively(entry *Entry, chains *core.CertificateChains, 
 }
 
 func (R *Repository) UpdateCRL(crlLocations *core.CRLLocations, chains *core.CertificateChains) error {
-	loader, err := crlloader.CreatePreferredCrlLoader(crlLocations, R.logger)
+	loader, err := R.crlLoaderFactory.CreatePreferredCrlLoader(crlLocations, R.logger)
 	if err != nil {
 		return err
 	}

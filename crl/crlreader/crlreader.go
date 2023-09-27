@@ -49,8 +49,14 @@ type CRLProcessor interface {
 	UpdateExtendedMetaInfo(info *ExtendedCRLMetaInfo) error
 	UpdateSignatureCertificate(entry *core.CertificateChainEntry) error
 }
+type CRLReader interface {
+	ReadCRL(crlProcessor CRLProcessor, crlFilePath string) (*CRLReadResult, error)
+}
 
-func ReadCRL(crlProcessor CRLProcessor, crlFilePath string) (*CRLReadResult, error) {
+type StreamingCRLFileReader struct {
+}
+
+func (StreamingCRLFileReader) ReadCRL(crlProcessor CRLProcessor, crlFilePath string) (*CRLReadResult, error) {
 
 	crlFile, err := os.Open(crlFilePath)
 	if err != nil {
