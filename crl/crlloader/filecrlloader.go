@@ -13,14 +13,14 @@ type FileLoader struct {
 	Logger   *zap.Logger
 }
 
-func (f FileLoader) LoadCRL(filePath string) error {
+func (f *FileLoader) LoadCRL(filePath string) error {
 	err := utils.Retry(CRLLoaderRetryCount, CRLLoaderRetryDelay, f.Logger, func() error {
 		return f.copyToTargetFile(filePath)
 	})
 	return err
 }
 
-func (f FileLoader) copyToTargetFile(filePath string) error {
+func (f *FileLoader) copyToTargetFile(filePath string) error {
 	stat, err := os.Stat(f.FileName)
 	if err != nil {
 		return err
@@ -46,10 +46,10 @@ func (f FileLoader) copyToTargetFile(filePath string) error {
 	return nil
 }
 
-func (f FileLoader) GetCRLLocationIdentifier() (string, error) {
+func (f *FileLoader) GetCRLLocationIdentifier() (string, error) {
 	return calculateHashHexString(f.FileName), nil
 }
 
-func (f FileLoader) GetDescription() string {
+func (f *FileLoader) GetDescription() string {
 	return f.FileName
 }

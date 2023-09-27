@@ -36,7 +36,7 @@ type TestingCrlLoader struct {
 type TestingCRLReader struct {
 }
 
-func (t TestingCRLReader) ReadCRL(crlProcessor crlreader.CRLProcessor, crlFilePath string) (*crlreader.CRLReadResult, error) {
+func (t *TestingCRLReader) ReadCRL(crlProcessor crlreader.CRLProcessor, crlFilePath string) (*crlreader.CRLReadResult, error) {
 
 	issuer := &pkix.RDNSequence{
 		pkix.RelativeDistinguishedNameSET{
@@ -59,7 +59,7 @@ func (t TestingCRLReader) ReadCRL(crlProcessor crlreader.CRLProcessor, crlFilePa
 	return nil, nil
 }
 
-func (t TestingCrlLoader) LoadCRL(targetFilePath string) error {
+func (t *TestingCrlLoader) LoadCRL(targetFilePath string) error {
 	crlPath := testhelper.GetTestDataFilePath("crl1.crl")
 	err := copyToTargetFile(crlPath, targetFilePath)
 	return err
@@ -91,17 +91,17 @@ func copyToTargetFile(sourceFileName string, targetFileName string) error {
 	return nil
 }
 
-func (t TestingCrlLoader) GetCRLLocationIdentifier() (string, error) {
+func (t *TestingCrlLoader) GetCRLLocationIdentifier() (string, error) {
 	return testCRLIdentifier, nil
 }
 
-func (t TestingCrlLoader) GetDescription() string {
+func (t *TestingCrlLoader) GetDescription() string {
 	//TODO implement me
 	panic("implement me")
 }
 
 func (t TestingCRLLoaderFactory) CreatePreferredCrlLoader(crlLocations *core.CRLLocations, logger *zap.Logger) (crlloader.CRLLoader, error) {
-	return TestingCrlLoader{crlLocations, logger}, nil
+	return &TestingCrlLoader{crlLocations, logger}, nil
 }
 
 func TestNewCRLRepositoryOfTypeMap(t *testing.T) {
@@ -207,7 +207,7 @@ func TestIsRevokedNonStrict(t *testing.T) {
 		crlConfig,
 		logger,
 		TestingCRLLoaderFactory{},
-		TestingCRLReader{},
+		&TestingCRLReader{},
 	}
 
 	certificate := &x509.Certificate{}
@@ -240,7 +240,7 @@ func TestIsRevokedStrictButNotLoaded(t *testing.T) {
 		crlConfig,
 		logger,
 		TestingCRLLoaderFactory{},
-		TestingCRLReader{},
+		&TestingCRLReader{},
 	}
 
 	// Create a test Certificate and CRLLocations
@@ -274,7 +274,7 @@ func TestIsRevokedStrictLoadedWithRevokedCert(t *testing.T) {
 		crlConfig,
 		logger,
 		loaderFactory,
-		TestingCRLReader{},
+		&TestingCRLReader{},
 	}
 	crlLocations := &core.CRLLocations{}
 
@@ -332,7 +332,7 @@ func TestIsRevokedStrictLoadedWithNonRevokedCert(t *testing.T) {
 		crlConfig,
 		logger,
 		loaderFactory,
-		TestingCRLReader{},
+		&TestingCRLReader{},
 	}
 	crlLocations := &core.CRLLocations{}
 

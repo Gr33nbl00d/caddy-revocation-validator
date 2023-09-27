@@ -95,6 +95,52 @@ func (suite *MultiSchemesCRLLoaderSuite) TestLoadCRL_Failure() {
 	mockLoader2.AssertCalled(suite.T(), "LoadCRL", "test.crl")
 }
 
+func (suite *MultiSchemesCRLLoaderSuite) TestLoadCRL_LastSuccessfulLoader() {
+	// Create two mock loaders
+	mockLoader1 := &MockCRLLoader{}
+	mockLoader2 := &MockCRLLoader{}
+
+	// Configure the first loader to fail initially and then succeed
+	mockLoader1.On("LoadCRL", "test.crl").
+		Return(fmt.Errorf("Loader 1 failed")). // Fails initially
+		Once()                                 // Only called once
+
+	// Configure the second loader to succeed
+	mockLoader2.On("LoadCRL", "test.crl").Return(nil)
+
+	mockLoader1.On("GetDescription").Return("Loader 1")
+	mockLoader2.On("GetDescription").Return("Loader 2")
+
+	// Create a MultiSchemesCRLLoader with the two loaders
+	loader := &MultiSchemesCRLLoader{
+		Loaders: []CRLLoader{mockLoader1, mockLoader2},
+		Logger:  suite.logger,
+	}
+
+	// First load attempt (first loader fails, second loader succeeds)
+	err := loader.LoadCRL("test.crl")
+	assert.NoError(suite.T(), err)
+
+	// Verify that both loades wre called
+	mockLoader2.AssertCalled(suite.T(), "LoadCRL", "test.crl")
+	mockLoader1.AssertCalled(suite.T(), "LoadCRL", "test.crl")
+
+	mockLoader1.Calls = nil
+	mockLoader2.Calls = nil
+	mockLoader1.ExpectedCalls = nil
+
+	// Now, configure the first loader to succeed
+	mockLoader1.On("LoadCRL", "test.crl").Return(nil)
+
+	// Second load attempt (second loader should be used as the last successful loader)
+	err = loader.LoadCRL("test.crl")
+	assert.NoError(suite.T(), err)
+
+	// Verify that the second loader (last successful loader) was called
+	mockLoader2.AssertCalled(suite.T(), "LoadCRL", "test.crl")
+	mockLoader1.AssertNotCalled(suite.T(), "LoadCRL", "test.crl")
+}
+
 func (suite *MultiSchemesCRLLoaderSuite) TestGetCRLLocationIdentifier() {
 	// Create two mock loaders
 	mockLoader1 := new(MockCRLLoader)

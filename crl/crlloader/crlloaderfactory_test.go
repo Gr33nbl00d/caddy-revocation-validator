@@ -31,7 +31,7 @@ func (suite *CRLLoaderSuite) TestURLLoader() {
 
 	// Use assert to check for errors and loader types
 	assert.NoError(suite.T(), err, "Expected no error, but got one")
-	assert.IsType(suite.T(), URLLoader{}, loader, "Expected URLLoader")
+	assert.IsType(suite.T(), &URLLoader{}, loader, "Expected URLLoader")
 	suite.logObserver.AssertLogSize(suite.T(), 0)
 }
 
@@ -44,7 +44,7 @@ func (suite *CRLLoaderSuite) TestFileLoader() {
 
 	// Use assert to check for errors and loader types
 	assert.NoError(suite.T(), err, "Expected no error, but got one")
-	assert.IsType(suite.T(), FileLoader{}, loader, "Expected FileLoader")
+	assert.IsType(suite.T(), &FileLoader{}, loader, "Expected FileLoader")
 	suite.logObserver.AssertLogSize(suite.T(), 0)
 }
 
@@ -57,8 +57,8 @@ func (suite *CRLLoaderSuite) TestMultiSchemesCRLLoader() {
 
 	// Use assert to check for errors and loader types
 	assert.NoError(suite.T(), err, "Expected no error, but got one")
-	assert.IsType(suite.T(), MultiSchemesCRLLoader{}, loader, "Expected MultiSchemesCRLLoader")
-	var multiSchemeLoader = loader.(MultiSchemesCRLLoader)
+	assert.IsType(suite.T(), &MultiSchemesCRLLoader{}, loader, "Expected MultiSchemesCRLLoader")
+	var multiSchemeLoader = loader.(*MultiSchemesCRLLoader)
 	assert.Equal(suite.T(), 2, len(multiSchemeLoader.Loaders))
 	suite.logObserver.AssertLogSize(suite.T(), 0)
 }
@@ -72,8 +72,8 @@ func (suite *CRLLoaderSuite) TestUnsupportedCDPLocationLogsWarning() {
 
 	// Use assert to check for errors and loader types
 	assert.NoError(suite.T(), err, "Expected no error, but got one")
-	assert.IsType(suite.T(), MultiSchemesCRLLoader{}, loader, "Expected MultiSchemesCRLLoader")
-	var multiSchemeLoader = loader.(MultiSchemesCRLLoader)
+	assert.IsType(suite.T(), &MultiSchemesCRLLoader{}, loader, "Expected MultiSchemesCRLLoader")
+	var multiSchemeLoader = loader.(*MultiSchemesCRLLoader)
 	assert.Equal(suite.T(), 1, len(multiSchemeLoader.Loaders))
 	suite.logObserver.AssertLogSize(suite.T(), 1)
 	suite.logObserver.AssertMessageEqual(suite.T(), 0, "unsupported CDP Location Scheme")

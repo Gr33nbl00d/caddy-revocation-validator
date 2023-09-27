@@ -12,10 +12,10 @@ type MultiSchemesCRLLoader struct {
 	lastSuccessfulLoader CRLLoader
 }
 
-func (f MultiSchemesCRLLoader) LoadCRL(filePath string) error {
+func (f *MultiSchemesCRLLoader) LoadCRL(filePath string) error {
 	if f.lastSuccessfulLoader != nil {
 		err := f.lastSuccessfulLoader.LoadCRL(filePath)
-		if err != nil {
+		if err == nil {
 			return nil
 		} else {
 			f.Logger.Warn("failed to load CRL from loader", zap.String("loader", f.lastSuccessfulLoader.GetDescription()))
@@ -36,7 +36,7 @@ func (f MultiSchemesCRLLoader) LoadCRL(filePath string) error {
 	return fmt.Errorf("failed to load CRL from all loaders %+v", f.Loaders)
 }
 
-func (f MultiSchemesCRLLoader) GetCRLLocationIdentifier() (string, error) {
+func (f *MultiSchemesCRLLoader) GetCRLLocationIdentifier() (string, error) {
 	builder := strings.Builder{}
 	for _, loader := range f.Loaders {
 		identifier, err := loader.GetCRLLocationIdentifier()
@@ -48,7 +48,7 @@ func (f MultiSchemesCRLLoader) GetCRLLocationIdentifier() (string, error) {
 	return calculateHashHexString(builder.String()), nil
 }
 
-func (f MultiSchemesCRLLoader) GetDescription() string {
+func (f *MultiSchemesCRLLoader) GetDescription() string {
 	var descriptions []string
 	for _, loader := range f.Loaders {
 		descriptions = append(descriptions, loader.GetDescription())

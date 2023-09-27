@@ -14,7 +14,7 @@ type URLLoader struct {
 	Logger    *zap.Logger
 }
 
-func (L URLLoader) LoadCRL(filePath string) error {
+func (L *URLLoader) LoadCRL(filePath string) error {
 	normalizedUrl, err := L.normalizeUrl()
 	if err != nil {
 		return err
@@ -26,14 +26,14 @@ func (L URLLoader) LoadCRL(filePath string) error {
 	return nil
 }
 
-func (L URLLoader) DownloadFromUrlWithRetries(filePath string, normalizedUrl string) error {
+func (L *URLLoader) DownloadFromUrlWithRetries(filePath string, normalizedUrl string) error {
 	err := utils.Retry(CRLLoaderRetryCount, CRLLoaderRetryDelay, L.Logger, func() error {
 		return L.downloadCRL(normalizedUrl, filePath)
 	})
 	return err
 }
 
-func (L URLLoader) GetCRLLocationIdentifier() (string, error) {
+func (L *URLLoader) GetCRLLocationIdentifier() (string, error) {
 	normalizedUrl, err := L.normalizeUrl()
 	if err != nil {
 		return "", err
@@ -41,11 +41,11 @@ func (L URLLoader) GetCRLLocationIdentifier() (string, error) {
 	return calculateHashHexString(normalizedUrl), nil
 }
 
-func (L URLLoader) GetDescription() string {
+func (L *URLLoader) GetDescription() string {
 	return L.UrlString
 }
 
-func (L URLLoader) downloadCRL(url string, filePath string) error {
+func (L *URLLoader) downloadCRL(url string, filePath string) error {
 	crlFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func (L URLLoader) downloadCRL(url string, filePath string) error {
 	return nil
 }
 
-func (L URLLoader) normalizeUrl() (string, error) {
+func (L *URLLoader) normalizeUrl() (string, error) {
 	parse, err := url.Parse(L.UrlString)
 	if err != nil {
 		return "", err
