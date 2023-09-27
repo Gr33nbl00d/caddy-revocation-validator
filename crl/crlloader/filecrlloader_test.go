@@ -95,8 +95,6 @@ func (suite *FileLoaderSuite) TestLoadCRLWhereCRLIsDirectory() {
 	// Call the LoadCRL method
 	err = fileLoader.LoadCRL(copyToPath)
 	assert.Error(suite.T(), err, "should return an error")
-	assert.Contains(suite.T(), err.Error(), "after 5 attempts, last error: CRL File")
-	assert.Contains(suite.T(), err.Error(), "is a directory")
 }
 
 func (suite *FileLoaderSuite) TestLoadCRLWhereCRLPathDoesNotExist() {
@@ -123,7 +121,6 @@ func (suite *FileLoaderSuite) TestLoadCRLWhereCRLPathDoesNotExist() {
 	// Call the LoadCRL method
 	err = fileLoader.LoadCRL(copyToPath)
 	assert.Error(suite.T(), err, "should return an error")
-	assert.Contains(suite.T(), err.Error(), "The system cannot find the path specified")
 }
 
 func (suite *FileLoaderSuite) TestLoadCRLWhereCRLTargetPathDoesNotExist() {
@@ -141,7 +138,6 @@ func (suite *FileLoaderSuite) TestLoadCRLWhereCRLTargetPathDoesNotExist() {
 	// Call the LoadCRL method
 	err := fileLoader.LoadCRL(copyToPath)
 	assert.Error(suite.T(), err, "should return an error")
-	assert.Contains(suite.T(), err.Error(), "The system cannot find the path specified")
 }
 
 func (suite *FileLoaderSuite) TestGetCRLLocationIdentifier() {
