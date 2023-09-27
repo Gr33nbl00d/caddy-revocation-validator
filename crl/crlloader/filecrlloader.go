@@ -28,7 +28,7 @@ func (f FileLoader) copyToTargetFile(filePath string) error {
 	if stat.IsDir() {
 		return fmt.Errorf("CRL File %s is a directory", f.FileName)
 	}
-	crlFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_EXCL, 0600)
+	crlFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_EXCL|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}
