@@ -264,4 +264,3 @@ Some technical debt:
 
 * Improve Unit Test coverage to 80%
 * Add automatic Integration Tests
-* Automatic dependency updates
