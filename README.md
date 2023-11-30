@@ -64,7 +64,7 @@ Minimal config for OCSP and CRL support via CDP/AIA
 ```json
 "client_authentication": {
 "trusted_ca_certs_pem_files": [
-  "./certificates/ca.pem",
+  "./certificates/ca.pem"
 ],
 "mode": "require_and_verify",
 		"verifiers": [
@@ -75,7 +75,7 @@ Minimal config for OCSP and CRL support via CDP/AIA
 				  "work_dir": "./crlworkdir"
 				},
 				"ocsp_config": {
-					"default_cache_duration" : "10m",
+					"default_cache_duration" : "10m"
 				}
 			}
 		]
