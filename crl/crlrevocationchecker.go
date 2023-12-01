@@ -65,10 +65,12 @@ func (c *CRLRevocationChecker) Provision(crlConfig *config.CRLConfig, logger *za
 
 	logger.Info("creating crl certificate chains")
 	chains := core.NewCertificateChains(nil, crlConfig.TrustedSignatureCerts)
+	logger.Info("adding crl entries from crl_urls config")
 	err = c.addCrlUrlsFromConfig(chains)
 	if err != nil {
 		return err
 	}
+	logger.Info("adding crl entries from crl_files config")
 	err = c.addCrlFilesFromConfig(chains)
 	if err != nil {
 		return err
@@ -101,6 +103,7 @@ func (c *CRLRevocationChecker) addCrlUrlsFromConfig(chains *core.CertificateChai
 			return err
 		}
 		//update in case chains have changed
+		c.logger.Info("Updating crl from location " + crlUrl)
 		err = c.crlRepository.UpdateCRL(&crlLocations, chains)
 		if err != nil {
 			return err
@@ -119,6 +122,7 @@ func (c *CRLRevocationChecker) addCrlFilesFromConfig(chains *core.CertificateCha
 			return err
 		}
 		//update in case chains have changed
+		c.logger.Info("Updating crl from location " + crlFile)
 		err = c.crlRepository.UpdateCRL(&crlLocations, chains)
 		if err != nil {
 			return err

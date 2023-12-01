@@ -5,7 +5,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/gr33nbl00d/caddy-revocation-validator/config"
-	"io/ioutil"
+	"os"
 	"time"
 )
 
@@ -164,7 +164,7 @@ func parseTrustedCrlSignerCerts(crlConfig *config.CRLConfig) error {
 }
 
 func parseCertFromFile(certFile string) (*x509.Certificate, error) {
-	certBytes, err := ioutil.ReadFile(certFile)
+	certBytes, err := os.ReadFile(certFile)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func parseCertFromFile(certFile string) (*x509.Certificate, error) {
 	}
 	certificate, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse certificate from file #{certFile}", err)
 	}
 	return certificate, nil
 }

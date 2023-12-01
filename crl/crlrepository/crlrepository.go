@@ -274,6 +274,7 @@ func (R *Repository) updateCRL(identifier string) error {
 }
 
 func (R *Repository) updateCrlEntry(entry *Entry, newChains *core.CertificateChains) (err error) {
+	R.logger.Info("updating crl " + entry.CRLLoader.GetDescription())
 	var store crlstore.CRLStore
 	tempFileName, err := R.createTempFile()
 	if err != nil {
@@ -291,6 +292,7 @@ func (R *Repository) updateCrlEntry(entry *Entry, newChains *core.CertificateCha
 	defer os.Remove(tempFileName)
 
 	var chains = newChains
+
 	points, storedChains, err := R.getCrlUpdateInformation(entry, err)
 	if err != nil {
 		return err
@@ -302,6 +304,7 @@ func (R *Repository) updateCrlEntry(entry *Entry, newChains *core.CertificateCha
 	if err != nil {
 		return err
 	}
+	R.logger.Info("loading crl " + entry.CRLLoader.GetDescription())
 	err = loader.LoadCRL(tempFileName)
 	if err != nil {
 		return err
@@ -316,7 +319,7 @@ func (R *Repository) updateCrlEntry(entry *Entry, newChains *core.CertificateCha
 	}
 
 	var processor = crlstore.CRLPersisterProcessor{CRLStore: store}
-
+	R.logger.Info("parsing crl loaded from " + entry.CRLLoader.GetDescription())
 	err = processor.UpdateCRLLocations(points)
 	if err != nil {
 		return err
@@ -326,6 +329,7 @@ func (R *Repository) updateCrlEntry(entry *Entry, newChains *core.CertificateCha
 	if err != nil {
 		return err
 	}
+	R.logger.Info("verify crl signature of crl " + entry.CRLLoader.GetDescription())
 	signatureCert, err := verifyCRLSignature(result, chains)
 	if err != nil {
 		R.setLastSignatureVerifyFailed(entry, result)
@@ -344,6 +348,7 @@ func (R *Repository) updateCrlEntry(entry *Entry, newChains *core.CertificateCha
 		R.deleteEntrySync(identifier)
 		return err
 	}
+	R.logger.Info("finished updating crl " + entry.CRLLoader.GetDescription())
 	return nil
 }
 
