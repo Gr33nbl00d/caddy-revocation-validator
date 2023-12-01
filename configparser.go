@@ -174,7 +174,7 @@ func parseCertFromFile(certFile string) (*x509.Certificate, error) {
 	}
 	certificate, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse certificate from file #{certFile}", err)
+		return nil, fmt.Errorf("could not parse certificate from file #{certFile} %v", err)
 	}
 	return certificate, nil
 }
