@@ -338,7 +338,7 @@ func newHashingDERCRLReader(crlFile *os.File) hashing.HashingReaderWrapper {
 
 func newHashingPEMCRLReader(crlFile *os.File) hashing.HashingReaderWrapper {
 	pemReader := pemreader.NewPemReader(bufio.NewReader(crlFile))
-	decoder := base64.NewDecoder(base64.RawStdEncoding, &pemReader)
+	decoder := base64.NewDecoder(base64.StdEncoding, &pemReader)
 
 	var reader = hashing.HashingReaderWrapper{
 		Reader: bufio.NewReader(decoder),
