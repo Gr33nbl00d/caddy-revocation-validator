@@ -34,5 +34,10 @@ func TestReadCRL(t *testing.T) {
 	result, err := reader.ReadCRL(CRLPersisterProcessorMock{}, testhelper.GetTestDataFilePath("crl1.crl"))
 	assert.Nil(t, err)
 	t.Logf("%v", result)
-
+}
+func TestReadCRLWithPadding(t *testing.T) {
+	reader := StreamingCRLFileReader{}
+	result, err := reader.ReadCRL(CRLPersisterProcessorMock{}, testhelper.GetTestDataFilePath("crlpadding.pem"))
+	assert.Nil(t, err)
+	t.Logf("%v", result)
 }

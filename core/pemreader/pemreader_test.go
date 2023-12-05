@@ -64,6 +64,19 @@ func TestPemReader_Read(t *testing.T) {
 	assert.Equals(t, "13e491524e70a5b1057b9010fe7b5aa3fc8b60b6", resultHash)
 }
 
+func TestPemReader_ReadPemWithPadding(t *testing.T) {
+	testFile, err := os.Open(testhelper.GetTestDataFilePath("crlpadding.pem"))
+	assert.Nil(t, err)
+	reader := NewPemReader(bufio.NewReader(testFile))
+	allBytes, err := readAllBytes(t, reader)
+	assert.Nil(t, err)
+	hasher := sha1.New()
+
+	hasher.Write(allBytes)
+	resultHash := hex.EncodeToString(hasher.Sum(nil))
+	assert.Equals(t, "1a0526838635309c0c7660d04372f66d1d54a1dd", resultHash)
+}
+
 func TestPemReader_ReadWithInvalidFile(t *testing.T) {
 	testFile, err := os.Open(testhelper.GetTestDataFilePath("invalidcrl1.pem"))
 	assert.Nil(t, err)
