@@ -1,4 +1,4 @@
-module github.com/zachgalvin/caddy-revocation-validator.git
+module github.com/zachgalvin/caddy-revocation-validator
 
 go 1.19
 
