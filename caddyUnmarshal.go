@@ -1,6 +1,7 @@
 package revocation
 
 import (
+	"log"
 	"strconv"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -21,9 +22,10 @@ func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) err
 	c.CRLConfig = &crlConfg
 	c.OCSPConfig = &ocspConfig
 
-	for d.Next() {
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		key := d.Val()
 
+		log.Printf("key: %v", key
 		switch key {
 		case "mode":
 			if !d.NextArg() {
