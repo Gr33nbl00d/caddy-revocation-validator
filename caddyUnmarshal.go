@@ -25,7 +25,6 @@ func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) err
 	for d.Next() {
 		key := d.Val()
 
-		log.Printf("key: %v", key)
 		switch key {
 		case "mode":
 			if !d.NextArg() {
@@ -96,6 +95,8 @@ func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) err
 					}
 
 					crlConfg.TrustedSignatureCertsFiles = append(crlConfg.TrustedSignatureCertsFiles, d.Val())
+				default:
+					return nil, d.Errf("unknown subdirective for the crl config in the revocation verifier: %s", h.Val())
 				}
 			}
 		case "ocsp_config":
@@ -120,9 +121,14 @@ func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) err
 
 					ocspConfig.OCSPAIAStrict = false
 
+				default:
+					return nil, d.Errf("unknown subdirective for the ocsp config in the revocation verifier: %s", h.Val())
 				}
 			}
+		default:
+			return nil, d.Errf("unknown subdirective for the revocation verifier: %s", h.Val())
 		}
+
 	}
 	return nil
 }
