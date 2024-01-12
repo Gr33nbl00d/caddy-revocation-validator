@@ -59,7 +59,6 @@ func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) err
 							return d.ArgErr()
 						}
 						crlConfg.CDPConfig.CRLCDPStrict = b
-						// ...
 					case "storage_type":
 						if !d.NextArg() {
 							return d.ArgErr()
