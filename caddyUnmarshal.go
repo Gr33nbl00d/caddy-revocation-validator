@@ -1,7 +1,6 @@
 package revocation
 
 import (
-	"log"
 	"strconv"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -96,7 +95,7 @@ func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) err
 
 					crlConfg.TrustedSignatureCertsFiles = append(crlConfg.TrustedSignatureCertsFiles, d.Val())
 				default:
-					return nil, d.Errf("unknown subdirective for the crl config in the revocation verifier: %s", h.Val())
+					return d.Errf("unknown subdirective for the crl config in the revocation verifier: %s", d.Val())
 				}
 			}
 		case "ocsp_config":
@@ -122,11 +121,11 @@ func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) err
 					ocspConfig.OCSPAIAStrict = false
 
 				default:
-					return nil, d.Errf("unknown subdirective for the ocsp config in the revocation verifier: %s", h.Val())
+					return d.Errf("unknown subdirective for the ocsp config in the revocation verifier: %s", d.Val())
 				}
 			}
 		default:
-			return nil, d.Errf("unknown subdirective for the revocation verifier: %s", h.Val())
+			return d.Errf("unknown subdirective for the revocation verifier: %s", key)
 		}
 
 	}
