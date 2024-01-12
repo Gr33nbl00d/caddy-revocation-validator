@@ -25,7 +25,7 @@ func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) err
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		key := d.Val()
 
-		log.Printf("key: %v", key
+		log.Printf("key: %v", key)
 		switch key {
 		case "mode":
 			if !d.NextArg() {
