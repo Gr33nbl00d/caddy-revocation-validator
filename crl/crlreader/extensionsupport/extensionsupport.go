@@ -68,7 +68,7 @@ const OidIssDistributionPoint = "2.5.29.28"
 var handledCRLExtensions = map[string]bool{
 	OidCertExtAuthorityKeyId: true,
 	OidCrlExtCrlNumber:       true,
-	OidIssDitributionPoint:   true,
+	OidIssDistributionPoint:   true,
 }
 
 func FindExtension(oidString string, extensions *[]pkix.Extension) *pkix.Extension {
