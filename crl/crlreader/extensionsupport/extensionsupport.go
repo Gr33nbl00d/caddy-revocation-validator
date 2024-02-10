@@ -63,10 +63,12 @@ func findLastRecursiveContextSpecificTagInOrder(previous *asn1parser.TagLength, 
 const OidCertExtSubjectKeyId = "2.5.29.14"
 const OidCertExtAuthorityKeyId = "2.5.29.35"
 const OidCrlExtCrlNumber = "2.5.29.20"
+const OidIssDistributionPoint = "2.5.29.28"
 
 var handledCRLExtensions = map[string]bool{
 	OidCertExtAuthorityKeyId: true,
 	OidCrlExtCrlNumber:       true,
+	OidIssDitributionPoint:   true,
 }
 
 func FindExtension(oidString string, extensions *[]pkix.Extension) *pkix.Extension {
