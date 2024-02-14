@@ -96,8 +96,7 @@ func (t *TestingCrlLoader) GetCRLLocationIdentifier() (string, error) {
 }
 
 func (t *TestingCrlLoader) GetDescription() string {
-	//TODO implement me
-	panic("implement me")
+	return "testing crl loader"
 }
 
 func (t TestingCRLLoaderFactory) CreatePreferredCrlLoader(crlLocations *core.CRLLocations, logger *zap.Logger) (crlloader.CRLLoader, error) {
