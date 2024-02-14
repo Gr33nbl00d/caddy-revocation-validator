@@ -126,6 +126,7 @@ func (R *Repository) tryUpdateSignatureCertFromChain(entry *Entry, chains *core.
 }
 
 func (R *Repository) loadCRL(entry *Entry, chains *core.CertificateChains) (err error) {
+	R.logger.Debug("loading crl", zap.String("crl", entry.CRLLoader.GetDescription()))
 	tempFileName, err := R.createTempFile()
 	if err != nil {
 		return err
@@ -148,10 +149,12 @@ func (R *Repository) loadCRL(entry *Entry, chains *core.CertificateChains) (err 
 				return err
 			}
 		} else {
+			R.logger.Debug("signature of crl validated successfully", zap.String("crl", entry.CRLLoader.GetDescription()))
 			err = processor.UpdateSignatureCertificate(signatureCert)
 			if err != nil {
 				return err
 			}
+			R.logger.Debug("crl loaded successfully", zap.String("crl", entry.CRLLoader.GetDescription()))
 		}
 	}
 	entry.Loaded = true
