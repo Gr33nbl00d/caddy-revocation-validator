@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
 	"github.com/gr33nbl00d/caddy-revocation-validator/config"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl"
@@ -108,6 +109,21 @@ func (c *CertRevocationValidator) Cleanup() error {
 		}
 	}
 	err := c.ocspRevocationChecker.Cleanup()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	config, err := parseConfigFromCaddyfile(d)
+	if err != nil {
+		return err
+	}
+	c.OCSPConfig = config.OCSPConfig
+	c.CRLConfig = config.CRLConfig
+	c.Mode = config.Mode
+	err = validateConfig(c)
 	if err != nil {
 		return err
 	}
