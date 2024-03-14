@@ -59,7 +59,7 @@ After xcaddy installation you can build caddy with this plugin by executing:
 The easiest way to use this plugin is to enable client revocation support via CDP and AIA certificate extensions. This requires that the client certificates has either CDP or AIA or both extensions
 defined
 
-Minimal config for OCSP and CRL support via CDP/AIA
+Minimal JSON config for OCSP and CRL support via CDP/AIA
 
 ```json
 "client_authentication": {
@@ -249,6 +249,35 @@ In strict mode it is required that if an OCSP server is defined inside AIA exten
 one OCSP server defined can be contacted to check for revocation. Or a valid response of one of the OCSP server is inside the cache 
 If no OCSP server can be contacted and no cached response is present or the validation of the OCSP response signature failed connection is denied.
 
+# Caddyfile Config
+Instead of the standard JSON config, this plugin can also be configured via caddyfile.
+
+## Minimal Example
+```
+  tls ./certificates/server.key {
+    ca_root ./certificates/ca.pem
+	client_auth {
+		mode                   require_and_verify
+		trusted_ca_cert_file   ./certificates/ca.crt
+		verifier revocation {
+		    mode crl_only
+                    crl_config {
+                        work_dir "./workdir"
+                        storage_type memory
+                        update_interval 30m
+                        signature_validation_mode verify_log
+                        trusted_signature_cert_file "./certificates/ca.crt"
+                        cdp_config {
+                           crl_fetch_mode fetch_actively
+                           crl_cdp_strict true
+                        }
+                    }
+            ocsp_config {
+              default_cache_duration 30m
+              ocsp_aia_strict true
+            }
+
+```
 ## Todos:
 
 Some features are still missing:
