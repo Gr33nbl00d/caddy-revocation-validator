@@ -36,7 +36,7 @@ type CertRevocationValidator struct {
 
 func (c CertRevocationValidator) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID: "tls.client_auth.revocation",
+		ID: "tls.client_auth.verifier.revocation",
 		New: func() caddy.Module {
 			return new(CertRevocationValidator)
 		},
