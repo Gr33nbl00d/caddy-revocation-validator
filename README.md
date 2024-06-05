@@ -41,7 +41,8 @@ support which also supports big CRL list without running out of memory.
 
 # Requirements
 
-Minum supported caddy version is 2.5.2
+Minimum supported caddy version is 2.5.2
+For 1.0.5 minimum supported caddy version 2.8.4
 
 # Getting started
 ## Installation
