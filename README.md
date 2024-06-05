@@ -82,6 +82,33 @@ Minimal JSON config for OCSP and CRL support via CDP/AIA
 }
 ```
 
+# Example caddyfile config
+```caddyfile
+  
+	client_auth {
+		mode                   require_and_verify
+		trusted_ca_cert_file   ./certificates/customerca.crt
+		verifier revocation {
+		    mode crl_only
+            crl_config {
+              work_dir "./crlworkdir"
+              storage_type memory
+              update_interval 30m
+              signature_validation_mode verify_log
+              trusted_signature_cert_file "./certificates/customerca.crt"
+              cdp_config {
+                crl_fetch_mode fetch_actively
+                crl_cdp_strict true
+              }
+            }
+            ocsp_config {
+              default_cache_duration 30m
+              ocsp_aia_strict true
+            }
+		}
+	}	
+```
+
 # Full Config Example
 
 ```json
@@ -250,7 +277,7 @@ one OCSP server defined can be contacted to check for revocation. Or a valid res
 If no OCSP server can be contacted and no cached response is present or the validation of the OCSP response signature failed connection is denied.
 
 # Caddyfile Config
-Instead of the standard JSON config, this plugin can also be configured via caddyfile.
+Instead of the standard JSON config, this plugin can also be configured via [caddyfile](#example-caddyfile-config).
 
 ## Minimal Example
 ```
