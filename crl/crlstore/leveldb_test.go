@@ -1,0 +1,235 @@
+package crlstore
+
+import (
+	"crypto/x509/pkix"
+	"encoding/asn1"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/hashing"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
+	"github.com/gr33nbl00d/caddy-revocation-validator/testhelper"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+	"github.com/syndtr/goleveldb/leveldb"
+	"go.uber.org/zap"
+	"math/big"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+type LevelDbStoreSuite struct {
+	suite.Suite
+	store             *LevelDbStore
+	serializer        *ASN1Serializer
+	logger            *zap.Logger
+	testIssuer        *pkix.RDNSequence
+	revokedCert       *pkix.RevokedCertificate
+	revokedCertSerial *big.Int
+}
+
+func (suite *LevelDbStoreSuite) SetupTest() {
+	suite.testIssuer = &pkix.RDNSequence{
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{
+				Type:  asn1.ObjectIdentifier{2, 5, 4, 3}, // OID for CommonName
+				Value: "Test Issuer",
+			},
+		},
+	}
+	suite.revokedCertSerial = new(big.Int)
+	suite.revokedCertSerial.SetUint64(52314123)
+	suite.revokedCert = &pkix.RevokedCertificate{
+		SerialNumber:   suite.revokedCertSerial,
+		RevocationTime: time.Time{},
+	}
+
+	suite.logger, _ = zap.NewDevelopment()
+	suite.serializer = &ASN1Serializer{}
+	tempDir, err := os.MkdirTemp("", "leveldbtest")
+	assert.NoError(suite.T(), err)
+	identifier := "testdb"
+	levelDBPath := filepath.Join(tempDir, identifier)
+	db, err := leveldb.OpenFile(levelDBPath, nil)
+	suite.store = &LevelDbStore{
+		Db:          db,
+		Serializer:  suite.serializer,
+		Identifier:  identifier,
+		BasePath:    tempDir,
+		LevelDBPath: levelDBPath,
+		Logger:      suite.logger,
+	}
+}
+
+func (suite *LevelDbStoreSuite) TearDownTest() {
+	suite.store.Close()
+	err := os.RemoveAll(suite.store.LevelDBPath)
+	assert.NoError(suite.T(), err)
+}
+
+func (suite *LevelDbStoreSuite) TestStartUpdateCrl() {
+	err := suite.store.StartUpdateCrl(&crlreader.CRLMetaInfo{})
+	assert.NoError(suite.T(), err)
+}
+
+func (suite *LevelDbStoreSuite) TestInsertRevokedCert() {
+	status, err := suite.store.GetCertRevocationStatus(suite.testIssuer, suite.revokedCertSerial)
+	assert.NoError(suite.T(), err)
+	assert.False(suite.T(), status.Revoked)
+
+	err = suite.store.InsertRevokedCert(&crlreader.CRLEntry{
+		Issuer:             suite.testIssuer,
+		RevokedCertificate: suite.revokedCert,
+	})
+	assert.NoError(suite.T(), err)
+	status, err = suite.store.GetCertRevocationStatus(suite.testIssuer, suite.revokedCertSerial)
+	assert.NoError(suite.T(), err)
+	assert.True(suite.T(), status.Revoked)
+}
+func (suite *LevelDbStoreSuite) TestIsEmpty() {
+	// Initially, the store should be empty
+	isEmpty := suite.store.IsEmpty()
+	assert.True(suite.T(), isEmpty)
+
+	// Insert some data into the store
+	err := suite.store.StartUpdateCrl(&crlreader.CRLMetaInfo{})
+	assert.NoError(suite.T(), err)
+
+	// Now, the store should not be empty
+	isEmpty = suite.store.IsEmpty()
+	assert.False(suite.T(), isEmpty)
+}
+
+func (suite *LevelDbStoreSuite) TestGetCRLMetaInfo() {
+	// Initially, there should be no CRL meta info
+	metaInfo, err := suite.store.GetCRLMetaInfo()
+	assert.Nil(suite.T(), metaInfo)
+	assert.Error(suite.T(), err)
+
+	// Insert some CRL meta info into the store
+	thisUpdateTime := time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
+	nextUpdateTime := time.Date(2005, time.January, 1, 0, 0, 0, 0, time.UTC)
+	expectedMetaInfo := &crlreader.CRLMetaInfo{
+		Issuer:     *suite.testIssuer,
+		ThisUpdate: thisUpdateTime,
+		NextUpdate: nextUpdateTime,
+	}
+	err = suite.store.StartUpdateCrl(expectedMetaInfo)
+	assert.NoError(suite.T(), err)
+
+	// Retrieve the CRL meta info
+	metaInfo, err = suite.store.GetCRLMetaInfo()
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), metaInfo)
+	assert.Equal(suite.T(), expectedMetaInfo, metaInfo)
+}
+
+func (suite *LevelDbStoreSuite) TestGetCRLExtMetaInfo() {
+	// Initially, there should be no extended CRL meta info
+	returnedMetaInfo, err := suite.store.GetCRLExtMetaInfo()
+	assert.Nil(suite.T(), returnedMetaInfo)
+	assert.Error(suite.T(), err)
+
+	crlNumber := new(big.Int)
+	crlNumber.SetUint64(52314123)
+
+	// Insert some extended CRL meta info into the store
+	expectedExtMetaInfo := &crlreader.ExtendedCRLMetaInfo{
+		CRLNumber: crlNumber,
+	}
+	err = suite.store.UpdateExtendedMetaInfo(expectedExtMetaInfo)
+	assert.NoError(suite.T(), err)
+
+	// Retrieve the extended CRL meta info
+	returnedMetaInfo, err = suite.store.GetCRLExtMetaInfo()
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), returnedMetaInfo)
+	assert.Equal(suite.T(), expectedExtMetaInfo, returnedMetaInfo)
+}
+
+func (suite *LevelDbStoreSuite) TestUpdateSignatureCertificate() {
+	// Create a dummy certificate chain entry
+	expectedCert := []byte{0x30, 0x82, 0x01, 0x0a} // replace with actual raw certificate bytes if needed
+	certEntry := &core.CertificateChainEntry{
+		RawCertificate: expectedCert,
+	}
+
+	// Update the signature certificate in the store
+	err := suite.store.UpdateSignatureCertificate(certEntry)
+	assert.NoError(suite.T(), err)
+
+	// Retrieve the stored certificate to verify it was updated correctly
+	hash := hashing.Sum64(SignatureCertKey)
+	returnedCert, err := suite.store.Db.Get(hash, nil)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), expectedCert, returnedCert)
+}
+
+func (suite *LevelDbStoreSuite) TestGetCRLSignatureCert() {
+	testCertFile, err := os.Open(testhelper.GetTestDataFilePath("testcert.der"))
+	assert.NoError(suite.T(), err)
+	defer utils.CloseWithErrorHandling(testCertFile.Close)
+	if err != nil {
+		suite.T().Errorf("error occured %v", err)
+	}
+	testCertBytes, err := os.ReadFile(testCertFile.Name())
+
+	// Store the serialized certificate in the LevelDbStore
+	hash := hashing.Sum64(SignatureCertKey)
+	err = suite.store.Db.Put(hash, testCertBytes, nil)
+	assert.NoError(suite.T(), err)
+
+	// Retrieve the certificate using the GetCRLSignatureCert method
+	retrievedCertEntry, err := suite.store.GetCRLSignatureCert()
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), retrievedCertEntry)
+
+	// Verify the retrieved certificate matches the original
+	assert.Equal(suite.T(), testCertBytes, retrievedCertEntry.Certificate.Raw)
+}
+
+func (suite *LevelDbStoreSuite) TestUpdateCRLLocations() {
+	// Create a dummy CRLLocations
+	crlLocations := &core.CRLLocations{
+		CRLDistributionPoints: []string{"http://example.com/crl1", "http://example.com/crl2"},
+	}
+
+	// Update the CRL locations in the LevelDbStore
+	err := suite.store.UpdateCRLLocations(crlLocations)
+	assert.NoError(suite.T(), err)
+
+	// Retrieve the stored CRL locations
+	hash := hashing.Sum64(CRLLocationKey)
+	crlLocationBytes, err := suite.store.Db.Get(hash, nil)
+	assert.NoError(suite.T(), err)
+
+	// Deserialize the retrieved CRL locations
+	retrievedCRLLocations, err := suite.serializer.DeserializeCRLLocations(crlLocationBytes)
+	assert.NoError(suite.T(), err)
+
+	// Verify the retrieved CRL locations match the original
+	assert.Equal(suite.T(), crlLocations, retrievedCRLLocations)
+}
+
+// TestGetCRLLocations tests the GetCRLLocations method of MapStore.
+func (suite *LevelDbStoreSuite) TestGetCRLLocations() {
+	// No CRL locations set
+	returnedCrlLocations, err := suite.store.GetCRLLocations()
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), returnedCrlLocations)
+
+	// Set CRL locations and check if retrieved properly
+	expectedCrllocations := core.CRLLocations{CRLDistributionPoints: []string{"http://example.com/crl1", "http://example.com/crl2"}, CRLUrl: "http://test"}
+	err = suite.store.UpdateCRLLocations(&expectedCrllocations)
+	assert.NoError(suite.T(), err)
+
+	// Retrieve CRL locations and check if retrieved properly
+	returnedCrlLocations, err = suite.store.GetCRLLocations()
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), returnedCrlLocations)
+	assert.Equal(suite.T(), expectedCrllocations, *returnedCrlLocations)
+}
+func TestLevelDbStoreSuite(t *testing.T) {
+	suite.Run(t, new(LevelDbStoreSuite))
+}

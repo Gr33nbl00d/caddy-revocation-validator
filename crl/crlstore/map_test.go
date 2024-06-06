@@ -4,6 +4,7 @@ import (
 	pkix "crypto/x509/pkix"
 	"encoding/asn1"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/hashing"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
 	"github.com/gr33nbl00d/caddy-revocation-validator/testhelper"
@@ -20,9 +21,10 @@ import (
 // MapStoreSuite is a test suite for the MapStore type.
 type MapStoreSuite struct {
 	suite.Suite
-	store       *MapStore
-	testIssuer  *pkix.RDNSequence
-	revokedCert *pkix.RevokedCertificate
+	store             *MapStore
+	testIssuer        *pkix.RDNSequence
+	revokedCert       *pkix.RevokedCertificate
+	revokedCertSerial *big.Int
 }
 
 // SetupTest is called before each test method in the suite.
@@ -43,10 +45,10 @@ func (suite *MapStoreSuite) SetupTest() {
 			},
 		},
 	}
-	serialBigInt := new(big.Int)
-	serialBigInt.SetUint64(52314123)
+	suite.revokedCertSerial = new(big.Int)
+	suite.revokedCertSerial.SetUint64(52314123)
 	suite.revokedCert = &pkix.RevokedCertificate{
-		SerialNumber:   serialBigInt,
+		SerialNumber:   suite.revokedCertSerial,
 		RevocationTime: time.Time{},
 	}
 }
@@ -65,9 +67,18 @@ func (suite *MapStoreSuite) TestStartUpdateCrl() {
 
 // TestInsertRevokedCert tests the InsertRevokedCert method of MapStore.
 func (suite *MapStoreSuite) TestInsertRevokedCert() {
-	err := suite.store.InsertRevokedCert(&crlreader.CRLEntry{Issuer: suite.testIssuer, RevokedCertificate: suite.revokedCert})
+	status, err := suite.store.GetCertRevocationStatus(suite.testIssuer, suite.revokedCertSerial)
 	assert.NoError(suite.T(), err)
-	// Add more assertions if needed
+	assert.False(suite.T(), status.Revoked)
+
+	err = suite.store.InsertRevokedCert(&crlreader.CRLEntry{
+		Issuer:             suite.testIssuer,
+		RevokedCertificate: suite.revokedCert,
+	})
+	assert.NoError(suite.T(), err)
+	status, err = suite.store.GetCertRevocationStatus(suite.testIssuer, suite.revokedCertSerial)
+	assert.NoError(suite.T(), err)
+	assert.True(suite.T(), status.Revoked)
 }
 
 // TestGetCertRevocationStatus tests the GetCertRevocationStatus method of MapStore.
@@ -118,10 +129,18 @@ func (suite *MapStoreSuite) TestUpdateExtendedMetaInfo() {
 
 // TestUpdateSignatureCertificate tests the UpdateSignatureCertificate method of MapStore.
 func (suite *MapStoreSuite) TestUpdateSignatureCertificate() {
-	// Update signature certificate and check if set properly
-	entry := &core.CertificateChainEntry{}
-	err := suite.store.UpdateSignatureCertificate(entry)
+	// Create a dummy certificate chain entry
+	expectedCert := []byte{0x30, 0x82, 0x01, 0x0a} // replace with actual raw certificate bytes if needed
+	certEntry := &core.CertificateChainEntry{
+		RawCertificate: expectedCert,
+	}
+
+	err := suite.store.UpdateSignatureCertificate(certEntry)
 	assert.NoError(suite.T(), err)
+	hash := hashing.Sum64(SignatureCertKey)
+	returnedCert := suite.store.Map[string(hash)]
+	assert.Equal(suite.T(), expectedCert, returnedCert)
+
 }
 
 // TestGetCRLSignatureCert tests the GetCRLSignatureCert method of MapStore.
@@ -142,29 +161,45 @@ func (suite *MapStoreSuite) TestGetCRLSignatureCert() {
 	assert.NotNil(suite.T(), certEntry)
 }
 
-// TestUpdateCRLLocations tests the UpdateCRLLocations method of MapStore.
 func (suite *MapStoreSuite) TestUpdateCRLLocations() {
-	// Update CRL locations and check if set properly
-	crlLocations := &core.CRLLocations{}
+	// Create a dummy CRLLocations
+	crlLocations := &core.CRLLocations{
+		CRLDistributionPoints: []string{"http://example.com/crl1", "http://example.com/crl2"},
+	}
+
+	// Update the CRL locations in the LevelDbStore
 	err := suite.store.UpdateCRLLocations(crlLocations)
 	assert.NoError(suite.T(), err)
+
+	// Retrieve the stored CRL locations
+	hash := hashing.Sum64(CRLLocationKey)
+	crlLocationBytes := suite.store.Map[string(hash)]
+
+	// Deserialize the retrieved CRL locations
+	retrievedCRLLocations, err := suite.store.Serializer.DeserializeCRLLocations(crlLocationBytes)
+	assert.NoError(suite.T(), err)
+
+	// Verify the retrieved CRL locations match the original
+	assert.Equal(suite.T(), crlLocations, retrievedCRLLocations)
 }
 
 // TestGetCRLLocations tests the GetCRLLocations method of MapStore.
 func (suite *MapStoreSuite) TestGetCRLLocations() {
 	// No CRL locations set
-	crlLocations, err := suite.store.GetCRLLocations()
+	returnedCrlLocations, err := suite.store.GetCRLLocations()
 	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), crlLocations)
+	assert.Nil(suite.T(), returnedCrlLocations)
 
 	// Set CRL locations and check if retrieved properly
-	err = suite.store.UpdateCRLLocations(&core.CRLLocations{})
+	expectedCrllocations := core.CRLLocations{CRLDistributionPoints: []string{"http://example.com/crl1", "http://example.com/crl2"}, CRLUrl: "http://test"}
+	err = suite.store.UpdateCRLLocations(&expectedCrllocations)
 	assert.NoError(suite.T(), err)
 
 	// Retrieve CRL locations and check if retrieved properly
-	crlLocations, err = suite.store.GetCRLLocations()
+	returnedCrlLocations, err = suite.store.GetCRLLocations()
 	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), crlLocations)
+	assert.NotNil(suite.T(), returnedCrlLocations)
+	assert.Equal(suite.T(), expectedCrllocations, *returnedCrlLocations)
 }
 
 // TestUpdate tests the Update method of MapStore.
