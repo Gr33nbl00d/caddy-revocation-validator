@@ -71,8 +71,8 @@ func (suite *MultiSchemesCRLLoaderSuite) TestLoadCRL_Failure() {
 	mockLoader2 := new(MockCRLLoader)
 
 	// Configure both loaders to fail
-	mockLoader1.On("LoadCRL", mock.Anything).Return(fmt.Errorf("Loader 1 failed"))
-	mockLoader2.On("LoadCRL", mock.Anything).Return(fmt.Errorf("Loader 2 failed"))
+	mockLoader1.On("LoadCRL", mock.Anything).Return(fmt.Errorf("loader 1 failed"))
+	mockLoader2.On("LoadCRL", mock.Anything).Return(fmt.Errorf("loader 2 failed"))
 	// Configure both loaders to provide descriptions
 	mockLoader1.On("GetDescription").Return("Loader 1")
 	mockLoader2.On("GetDescription").Return("Loader 2")
@@ -102,7 +102,7 @@ func (suite *MultiSchemesCRLLoaderSuite) TestLoadCRL_LastSuccessfulLoader() {
 
 	// Configure the first loader to fail initially and then succeed
 	mockLoader1.On("LoadCRL", "test.crl").
-		Return(fmt.Errorf("Loader 1 failed")). // Fails initially
+		Return(fmt.Errorf("loader 1 failed")). // Fails initially
 		Once()                                 // Only called once
 
 	// Configure the second loader to succeed
@@ -148,7 +148,7 @@ func (suite *MultiSchemesCRLLoaderSuite) TestLoadCRL_LastSuccessfulLoaderFailsOn
 
 	// Configure the first loader to fail initially and then succeed
 	mockLoader1.On("LoadCRL", "test.crl").
-		Return(fmt.Errorf("Loader 1 failed")). // Fails initially
+		Return(fmt.Errorf("loader 1 failed")). // Fails initially
 		Once()                                 // Only called once
 
 	// Configure the second loader to succeed
@@ -182,7 +182,7 @@ func (suite *MultiSchemesCRLLoaderSuite) TestLoadCRL_LastSuccessfulLoaderFailsOn
 
 	// and second loader to fail:
 	mockLoader2.On("LoadCRL", "test.crl").
-		Return(fmt.Errorf("Loader 2 failed")). // Fails initially
+		Return(fmt.Errorf("loader 2 failed")). // Fails initially
 		Once()                                 // Only called once
 	mockLoader2.On("GetDescription").Return("Loader 2")
 	// Second load attempt (second loader should be used as the last successful loader)

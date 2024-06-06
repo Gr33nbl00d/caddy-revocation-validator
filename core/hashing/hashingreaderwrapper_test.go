@@ -96,7 +96,9 @@ func (s *HashingReaderWrapperTestSuite) TestHashOfLast4BytesIgnoringFirst11Bytes
 	assert.Nil(s.T(), s.sut.hash)
 
 	s.sut.StartHashCalculation(crypto.SHA512)
-	s.sut.Discard(11)
+	err := s.sut.Discard(11)
+	assert.NoError(s.T(), err)
+
 	assert.NotNil(s.T(), s.sut.hash)
 	assert.True(s.T(), s.sut.CalculateSignature)
 

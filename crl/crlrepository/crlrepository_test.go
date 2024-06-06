@@ -5,12 +5,12 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlloader"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlstore"
 	"github.com/gr33nbl00d/caddy-revocation-validator/testhelper"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"sync"
@@ -36,7 +36,7 @@ type TestingCrlLoader struct {
 type TestingCRLReader struct {
 }
 
-func (t *TestingCRLReader) ReadCRL(crlProcessor crlreader.CRLProcessor, crlFilePath string) (*crlreader.CRLReadResult, error) {
+func (t *TestingCRLReader) ReadCRL(crlProcessor crlreader.CRLProcessor, _ string) (*crlreader.CRLReadResult, error) {
 
 	issuer := &pkix.RDNSequence{
 		pkix.RelativeDistinguishedNameSET{
@@ -49,13 +49,16 @@ func (t *TestingCRLReader) ReadCRL(crlProcessor crlreader.CRLProcessor, crlFileP
 	serialBigInt := new(big.Int)
 	serialBigInt.SetUint64(52314123)
 
-	crlProcessor.InsertRevokedCertificate(&crlreader.CRLEntry{
-		issuer,
-		&pkix.RevokedCertificate{
+	err := crlProcessor.InsertRevokedCertificate(&crlreader.CRLEntry{
+		Issuer: issuer,
+		RevokedCertificate: &pkix.RevokedCertificate{
 			SerialNumber:   serialBigInt,
 			RevocationTime: time.Time{},
 		},
 	})
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
@@ -77,12 +80,12 @@ func copyToTargetFile(sourceFileName string, targetFileName string) error {
 	if err != nil {
 		return err
 	}
-	defer crlFile.Close()
+	defer utils.CloseWithErrorHandling(crlFile.Close)
 	sourceFile, err := os.OpenFile(sourceFileName, os.O_RDONLY|os.O_EXCL, 0600)
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
+	defer utils.CloseWithErrorHandling(sourceFile.Close)
 
 	_, err = io.Copy(crlFile, sourceFile)
 	if err != nil {
@@ -126,12 +129,11 @@ func TestNewCRLRepositoryOfTypeMap(t *testing.T) {
 }
 
 func TestNewCRLRepositoryOfTypeLevelDB(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "crlnew_test")
+	tempDir, err := os.MkdirTemp("", "crlnew_test")
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
-
+	defer utils.CloseWithErrorHandling(func() error { return os.RemoveAll(tempDir) })
 	logger := zap.NewNop()
 	crlConfig := &config.CRLConfig{
 		WorkDir: tempDir,
@@ -163,11 +165,11 @@ func TestNewCRLRepositoryOfTypeUnknown(t *testing.T) {
 }
 
 func TestAddCRL(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "crl_test")
+	tempDir, err := os.MkdirTemp("", "crl_test")
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer utils.CloseWithErrorHandling(func() error { return os.RemoveAll(tempDir) })
 
 	logger := zap.NewNop()
 	crlConfig := &config.CRLConfig{

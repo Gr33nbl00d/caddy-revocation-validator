@@ -25,7 +25,7 @@ type CRLStore interface {
 	GetCRLSignatureCert() (*core.CertificateChainEntry, error)
 	UpdateCRLLocations(points *core.CRLLocations) error
 	GetCRLLocations() (*core.CRLLocations, error)
-	Update(interface{}) error
+	Update(store CRLStore) error
 	IsEmpty() bool
 	Close()
 	Delete() error

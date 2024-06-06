@@ -2,7 +2,6 @@ package crlloader
 
 import (
 	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +24,7 @@ func (suite *FileLoaderSuite) SetupTest() {
 	suite.logger = logger
 
 	// Create a temporary directory
-	tmpDir, err := ioutil.TempDir("", "test-crl-dir-")
+	tmpDir, err := os.MkdirTemp("", "test-crl-dir-")
 	assert.NoError(suite.T(), err, "Error creating temporary directory")
 	suite.tmpDir = tmpDir
 }
@@ -33,23 +32,24 @@ func (suite *FileLoaderSuite) SetupTest() {
 func (suite *FileLoaderSuite) TearDownTest() {
 	// Remove the temporary directory after each test
 
-	utils.Retry(10, 3*time.Second, zap.NewExample(), func() error {
+	err := utils.Retry(10, 3*time.Second, zap.NewExample(), func() error {
 		err := os.RemoveAll(suite.tmpDir)
 		assert.NoError(suite.T(), err, "Error removing temporary directory")
 		return err
 	})
+	assert.NoError(suite.T(), err)
 
 }
 
 func (suite *FileLoaderSuite) TestLoadCRL() {
 	// Create a temporary CRL file within the temporary directory
-	crlFile, err := ioutil.TempFile(suite.tmpDir, "test-crl-*.crl")
+	crlFile, err := os.CreateTemp(suite.tmpDir, "test-crl-*.crl")
 	// Write some data to the temporary file
 	_, err = crlFile.WriteString("Test CRL Data")
 	assert.NoError(suite.T(), err)
 	err = crlFile.Close()
 	assert.NoError(suite.T(), err, "Error creating temporary CRL file")
-	defer os.Remove(crlFile.Name())
+	defer utils.CloseWithErrorHandling(func() error { return os.Remove(crlFile.Name()) })
 
 	// Create a FileLoader instance
 	fileLoader := FileLoader{
@@ -66,7 +66,7 @@ func (suite *FileLoaderSuite) TestLoadCRL() {
 	assert.NoError(suite.T(), err, "Error copying CRL")
 
 	// Check if the CRL was copied correctly
-	copiedCRLData, err := ioutil.ReadFile(copyToPath)
+	copiedCRLData, err := os.ReadFile(copyToPath)
 
 	assert.NoError(suite.T(), err, "Error reading copied CRL")
 	assert.Equal(suite.T(), "Test CRL Data", string(copiedCRLData), "Copied CRL data doesn't match")
@@ -74,14 +74,14 @@ func (suite *FileLoaderSuite) TestLoadCRL() {
 
 func (suite *FileLoaderSuite) TestLoadCRLWhereCRLIsDirectory() {
 	// Create a temporary CRL file within the temporary directory
-	crlFile, err := ioutil.TempFile(suite.tmpDir, "test-crl-*.crl")
+	crlFile, err := os.CreateTemp(suite.tmpDir, "test-crl-*.crl")
 
 	// Write some data to the temporary file
 	_, err = crlFile.WriteString("Test CRL Data")
 	assert.NoError(suite.T(), err)
 	err = crlFile.Close()
 	assert.NoError(suite.T(), err, "Error creating temporary CRL file")
-	defer os.Remove(crlFile.Name())
+	defer utils.CloseWithErrorHandling(func() error { return os.Remove(crlFile.Name()) })
 
 	// Create a FileLoader instance
 	fileLoader := FileLoader{
@@ -100,14 +100,14 @@ func (suite *FileLoaderSuite) TestLoadCRLWhereCRLIsDirectory() {
 func (suite *FileLoaderSuite) TestLoadCRLWhereCRLPathDoesNotExist() {
 
 	// Create a temporary CRL file within the temporary directory
-	crlFile, err := ioutil.TempFile(suite.tmpDir, "test-crl-*.crl")
+	crlFile, err := os.CreateTemp(suite.tmpDir, "test-crl-*.crl")
 
 	// Write some data to the temporary file
 	_, err = crlFile.WriteString("Test CRL Data")
 	assert.NoError(suite.T(), err)
 	err = crlFile.Close()
 	assert.NoError(suite.T(), err, "Error creating temporary CRL file")
-	defer os.Remove(crlFile.Name())
+	defer utils.CloseWithErrorHandling(func() error { return os.Remove(crlFile.Name()) })
 
 	// Create a FileLoader instance
 	fileLoader := FileLoader{
@@ -142,11 +142,11 @@ func (suite *FileLoaderSuite) TestLoadCRLWhereCRLTargetPathDoesNotExist() {
 
 func (suite *FileLoaderSuite) TestGetCRLLocationIdentifier() {
 	// Create a temporary CRL file within the temporary directory
-	crlFile, err := ioutil.TempFile(suite.tmpDir, "test-crl-*.crl")
+	crlFile, err := os.CreateTemp(suite.tmpDir, "test-crl-*.crl")
 	assert.NoError(suite.T(), err, "Error creating temporary CRL file")
 	err = crlFile.Close()
 	assert.NoError(suite.T(), err, "Error creating temporary CRL file")
-	defer os.Remove(crlFile.Name())
+	defer utils.CloseWithErrorHandling(func() error { return os.Remove(crlFile.Name()) })
 
 	// Create a FileLoader instance
 	fileLoader := FileLoader{
@@ -162,11 +162,11 @@ func (suite *FileLoaderSuite) TestGetCRLLocationIdentifier() {
 
 func (suite *FileLoaderSuite) TestGetDescription() {
 	// Create a temporary CRL file within the temporary directory
-	crlFile, err := ioutil.TempFile(suite.tmpDir, "test-crl-*.crl")
+	crlFile, err := os.CreateTemp(suite.tmpDir, "test-crl-*.crl")
 	assert.NoError(suite.T(), err, "Error creating temporary CRL file")
 	err = crlFile.Close()
 	assert.NoError(suite.T(), err, "Error creating temporary CRL file")
-	defer os.Remove(crlFile.Name())
+	defer utils.CloseWithErrorHandling(func() error { return os.Remove(crlFile.Name()) })
 
 	// Create a FileLoader instance
 	fileLoader := FileLoader{

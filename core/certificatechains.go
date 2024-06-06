@@ -77,7 +77,7 @@ func NewCertificateChainsFromEntry(chainEntry *CertificateChainEntry) *Certifica
 	return chains
 }
 
-// Implemenation according to rfc5280 section 5.2.1
+// FindCertificateIssuerCandidates Implementation according to rfc5280 section 5.2.1
 func FindCertificateIssuerCandidates(issuer *pkix.RDNSequence, extensions *[]pkix.Extension, algorithmID x509.PublicKeyAlgorithm, chains *CertificateChains) ([]*CertificateChainEntry, error) {
 	keyIdentifierExtension := extensionsupport.FindExtension(extensionsupport.OidCertExtAuthorityKeyId, extensions)
 	if keyIdentifierExtension == nil {

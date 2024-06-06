@@ -10,19 +10,19 @@ import (
 type CRLPersisterProcessorMock struct {
 }
 
-func (C CRLPersisterProcessorMock) StartUpdateCrl(crlMetaInfo *CRLMetaInfo) error {
+func (C CRLPersisterProcessorMock) StartUpdateCrl(_ *CRLMetaInfo) error {
 	return nil
 }
 
-func (C CRLPersisterProcessorMock) InsertRevokedCertificate(entry *CRLEntry) error {
+func (C CRLPersisterProcessorMock) InsertRevokedCertificate(_ *CRLEntry) error {
 	return nil
 }
 
-func (C CRLPersisterProcessorMock) UpdateExtendedMetaInfo(info *ExtendedCRLMetaInfo) error {
+func (C CRLPersisterProcessorMock) UpdateExtendedMetaInfo(_ *ExtendedCRLMetaInfo) error {
 	return nil
 }
 
-func (C CRLPersisterProcessorMock) UpdateSignatureCertificate(entry *revocation.CertificateChainEntry) error {
+func (C CRLPersisterProcessorMock) UpdateSignatureCertificate(_ *revocation.CertificateChainEntry) error {
 	return nil
 }
 

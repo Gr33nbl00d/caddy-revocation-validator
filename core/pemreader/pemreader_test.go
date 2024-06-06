@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
 	"github.com/gr33nbl00d/caddy-revocation-validator/testhelper"
 	"github.com/smallstep/assert"
 	assert2 "github.com/stretchr/testify/assert"
@@ -15,12 +16,8 @@ import (
 )
 
 func TestIsPemFileWithPemFile(t *testing.T) {
-	type args struct {
-		file *os.File
-	}
-
 	crlFile, err := os.Open(testhelper.GetTestDataFilePath("crl1.pem"))
-	defer crlFile.Close()
+	defer utils.CloseWithErrorHandling(crlFile.Close)
 	if err != nil {
 		t.Errorf("error occured %v", err)
 	}
@@ -30,12 +27,8 @@ func TestIsPemFileWithPemFile(t *testing.T) {
 }
 
 func TestIsPemFileWithNonePemFile(t *testing.T) {
-	type args struct {
-		file *os.File
-	}
-
 	crlFile, err := os.Open(testhelper.GetTestDataFilePath("crl1.crl"))
-	defer crlFile.Close()
+	defer utils.CloseWithErrorHandling(crlFile.Close)
 	if err != nil {
 		t.Errorf("error occured %v", err)
 	}

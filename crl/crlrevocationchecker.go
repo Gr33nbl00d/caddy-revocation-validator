@@ -162,7 +162,7 @@ func (c *CRLRevocationChecker) updateCRLs(forceUpdate bool) {
 	// with a new one, possibly invoking a cleaning to happen again too soon.
 	// (We divide the interval by 2 because the crl update takes non-zero time,
 	// and we don't want to skip crl updates if we don't have to; whereas if a crl update
-	// took the entire interval, we'd probably want to skip the next one so we aren't
+	// took the entire interval, we'd probably want to skip the next one, so we aren't
 	// constantly updating. This allows crl updates to take up to half the interval's
 	// duration before we decide to skip the next one.)
 	if !forceUpdate && c.updateWasRecentlyFinished() {
@@ -177,14 +177,14 @@ func (c *CRLRevocationChecker) updateCRLs(forceUpdate bool) {
 }
 
 func (c *CRLRevocationChecker) updateWasRecentlyFinished() bool {
-	return (!lastCrlUpdateFinishTime.IsZero() && (time.Since(lastCrlUpdateFinishTime) < c.crlConfig.UpdateIntervalParsed/2))
+	return !lastCrlUpdateFinishTime.IsZero() && (time.Since(lastCrlUpdateFinishTime) < c.crlConfig.UpdateIntervalParsed/2)
 }
 
 func RegisterCRLWorkDirUsage(crlConfig *config.CRLConfig) error {
 	workDirInUseMutex.Lock()
 	defer workDirInUseMutex.Unlock()
 	if workDirsInUse[crlConfig.WorkDir] == 1 {
-		return fmt.Errorf("The same work dir %s was defined for multiple servers", crlConfig.WorkDir)
+		return fmt.Errorf("the same work dir %s was defined for multiple servers", crlConfig.WorkDir)
 	}
 	workDirsInUse[crlConfig.WorkDir] = 1
 	return nil
@@ -197,7 +197,7 @@ func DeregisterCRLWorkDirUsage(crlConfig *config.CRLConfig) {
 }
 
 var (
-	workDirsInUse           map[string]int = make(map[string]int)
+	workDirsInUse           = make(map[string]int)
 	workDirInUseMutex       sync.Mutex
 	crlUpdateMutex          sync.Mutex
 	lastCrlUpdateFinishTime time.Time

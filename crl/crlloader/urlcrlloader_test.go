@@ -1,7 +1,7 @@
 package crlloader
 
 import (
-	"io/ioutil"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -26,9 +26,9 @@ func (suite *URLLoaderSuite) SetupTest() {
 
 func (suite *URLLoaderSuite) TestLoadCRL() {
 	// Create a temporary directory to store the downloaded CRL
-	tmpDir, err := ioutil.TempDir("", "test-crl-dir-")
+	tmpDir, err := os.MkdirTemp("", "test-crl-dir-")
 	assert.NoError(suite.T(), err, "Error creating temporary directory")
-	defer os.RemoveAll(tmpDir)
+	defer utils.CloseWithErrorHandling(func() error { return os.RemoveAll(tmpDir) })
 
 	// Create a mock HTTP server that serves the CRL content
 	mockCRLContent := "Mock CRL Data"
@@ -51,16 +51,16 @@ func (suite *URLLoaderSuite) TestLoadCRL() {
 	assert.NoError(suite.T(), err, "Error loading CRL")
 
 	// Check if the downloaded CRL matches the expected content
-	downloadedCRLData, err := ioutil.ReadFile(downloadFilePath)
+	downloadedCRLData, err := os.ReadFile(downloadFilePath)
 	assert.NoError(suite.T(), err, "Error reading downloaded CRL")
 	assert.Equal(suite.T(), mockCRLContent, string(downloadedCRLData), "Downloaded CRL content doesn't match")
 }
 
 func (suite *URLLoaderSuite) TestLoadCRLWithInvalidUrl() {
 	// Create a temporary directory to store the downloaded CRL
-	tmpDir, err := ioutil.TempDir("", "test-crl-dir-")
+	tmpDir, err := os.MkdirTemp("", "test-crl-dir-")
 	assert.NoError(suite.T(), err, "Error creating temporary directory")
-	defer os.RemoveAll(tmpDir)
+	defer utils.CloseWithErrorHandling(func() error { return os.RemoveAll(tmpDir) })
 
 	// Create a mock HTTP server that serves the CRL content
 	mockCRLContent := "Mock CRL Data"
@@ -86,9 +86,9 @@ func (suite *URLLoaderSuite) TestLoadCRLWithInvalidUrl() {
 
 func (suite *URLLoaderSuite) TestLoadCRLWhereCRLTargetPathDoesNotExist() {
 	// Create a temporary directory to store the downloaded CRL
-	tmpDir, err := ioutil.TempDir("", "test-crl-dir-")
+	tmpDir, err := os.MkdirTemp("", "test-crl-dir-")
 	assert.NoError(suite.T(), err, "Error creating temporary directory")
-	defer os.RemoveAll(tmpDir)
+	defer utils.CloseWithErrorHandling(func() error { return os.RemoveAll(tmpDir) })
 
 	// Create a mock HTTP server that serves the CRL content
 	mockCRLContent := "Mock CRL Data"

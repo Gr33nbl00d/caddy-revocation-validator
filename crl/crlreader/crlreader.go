@@ -13,6 +13,7 @@ import (
 	"github.com/gr33nbl00d/caddy-revocation-validator/core/hashing"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core/pemreader"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core/signatureverify"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader/extensionsupport"
 	asn1crypto "golang.org/x/crypto/cryptobyte/asn1"
 	"math/big"
@@ -62,7 +63,7 @@ func (StreamingCRLFileReader) ReadCRL(crlProcessor CRLProcessor, crlFilePath str
 	if err != nil {
 		return nil, err
 	}
-	defer crlFile.Close()
+	defer utils.CloseWithErrorHandling(crlFile.Close)
 	algorithmIdentifier, err := findAlgorithmIdentifierInCRL(crlFile)
 	if err != nil {
 		return nil, err
@@ -294,7 +295,7 @@ func revokedCertificateListExists(reader hashing.HashingReaderWrapper) bool {
 func findAlgorithmIdentifierInCRL(file *os.File) (*pkix.AlgorithmIdentifier, error) {
 	var reader = newHashingCRLReader(file)
 	algoIdOffset := big.NewInt(0)
-	certificateListTL, err := asn1parser.ReadTagLength(reader)
+	certificateListTL, err := asn1parser.ReadTagLength(&reader)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +303,7 @@ func findAlgorithmIdentifierInCRL(file *os.File) (*pkix.AlgorithmIdentifier, err
 	if err != nil {
 		return nil, err
 	}
-	tbsCertListTL, err := asn1parser.PeekTagLength(reader, 0)
+	tbsCertListTL, err := asn1parser.PeekTagLength(&reader, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +313,7 @@ func findAlgorithmIdentifierInCRL(file *os.File) (*pkix.AlgorithmIdentifier, err
 		return nil, err
 	}
 	value := new(pkix.AlgorithmIdentifier)
-	err = asn1parser.ReadStruct(reader, value)
+	err = asn1parser.ReadStruct(&reader, value)
 	if err != nil {
 		return nil, err
 	}

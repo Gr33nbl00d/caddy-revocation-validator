@@ -7,6 +7,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/hex"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
 	"github.com/gr33nbl00d/caddy-revocation-validator/testhelper"
 	"github.com/smallstep/assert"
 	asn1crypto "golang.org/x/crypto/cryptobyte/asn1"
@@ -107,9 +108,9 @@ func TestReadUtcTime(t *testing.T) {
 	byteData, err := hex.DecodeString("170D3135303430373232333835355A")
 	assert.Nil(t, err)
 	reader := bufio.NewReader(bytes.NewReader(byteData))
-	time, err := ReadUtcTime(reader)
+	timeRead, err := ReadUtcTime(reader)
 	assert.Nil(t, err)
-	assert.True(t, expectedTime.Equal(*time))
+	assert.True(t, expectedTime.Equal(*timeRead))
 }
 
 func TestReadUtcTimeWrongTag(t *testing.T) {
@@ -155,7 +156,7 @@ func TestReadUtcTimeWithYearAfter2050(t *testing.T) {
 	expectedTime := time.Date(1955, time.April, 07, 22, 38, 55, 0, time.UTC)
 	byteData, err := hex.DecodeString("170D3535303430373232333835355a")
 	assert.Nil(t, err)
-	reader := bufio.NewReader(bytes.NewReader([]byte(byteData)))
+	reader := bufio.NewReader(bytes.NewReader(byteData))
 	result, err := ReadUtcTime(reader)
 	assert.Nil(t, err)
 	assert.True(t, expectedTime.Equal(*result))
@@ -667,7 +668,7 @@ func TestParseIssuerRDNSequence(t *testing.T) {
 
 	crtFile, err := os.Open(testhelper.GetTestDataFilePath("testcert.der"))
 	assert.Nil(t, err)
-	defer crtFile.Close()
+	defer utils.CloseWithErrorHandling(crtFile.Close)
 	if err != nil {
 		t.Errorf("error occured %v", err)
 	}
@@ -703,7 +704,7 @@ func TestParseSubjectRDNSequence(t *testing.T) {
 
 	crtFile, err := os.Open(testhelper.GetTestDataFilePath("testcert.der"))
 	assert.Nil(t, err)
-	defer crtFile.Close()
+	defer utils.CloseWithErrorHandling(crtFile.Close)
 	if err != nil {
 		t.Errorf("error occured %v", err)
 	}

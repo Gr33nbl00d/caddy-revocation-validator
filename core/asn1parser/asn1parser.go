@@ -29,7 +29,7 @@ type TagLength struct {
 	Length Length
 }
 
-// Complete length in byte of the tlv record
+// CalculateTLVLength Complete length in byte of the tlv record
 func (l TagLength) CalculateTLVLength() *big.Int {
 	sum := big.NewInt(0)
 	lengthSizeBigInt := big.NewInt(int64(l.Length.LengthSize))
@@ -39,14 +39,14 @@ func (l TagLength) CalculateTLVLength() *big.Int {
 	return sum
 }
 
-// Complete length in byte of value
+// CalculateValueLength Complete length in byte of value
 func (l TagLength) CalculateValueLength() *big.Int {
 	sum := big.NewInt(0)
 	sum = sum.Add(sum, &l.Length.Length)
 	return sum
 }
 
-// Complete length in byte of length of the value
+// CalculateTLLength Complete length in byte of length of the value
 func (l TagLength) CalculateTLLength() *big.Int {
 	sum := big.NewInt(0)
 	lengthSizeBigInt := big.NewInt(int64(l.Length.LengthSize))

@@ -11,7 +11,7 @@ const (
 	prime64 = 1099511628211
 )
 
-//fnva hash function
+// Sum64 fnva hash function
 func Sum64(key string) []byte {
 	var hash uint64 = offset64
 	for i := 0; i < len(key); i++ {

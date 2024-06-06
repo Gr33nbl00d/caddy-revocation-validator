@@ -32,12 +32,12 @@ func (f *FileLoader) copyToTargetFile(filePath string) error {
 	if err != nil {
 		return err
 	}
-	defer crlFile.Close()
+	defer utils.CloseWithErrorHandling(crlFile.Close)
 	sourceFile, err := os.OpenFile(f.FileName, os.O_RDONLY|os.O_EXCL, 0600)
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
+	defer utils.CloseWithErrorHandling(sourceFile.Close)
 
 	_, err = io.Copy(crlFile, sourceFile)
 	if err != nil {

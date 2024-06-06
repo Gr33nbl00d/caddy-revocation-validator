@@ -24,7 +24,7 @@ func TestFindCertificateIssuerCandidatesByIssuerAndAlgorithm(t *testing.T) {
 		},
 	}
 	// Create a sample list of extensions (empty for this test)
-	extensions := []pkix.Extension{}
+	var extensions []pkix.Extension
 
 	// Define the expected public key algorithm
 	algorithmID := x509.RSA
@@ -86,7 +86,7 @@ func TestFindCertificateIssuerCandidatesByIssuerAndAlgorithmWithOneNotMatching(t
 	}
 
 	// Create a sample list of extensions (empty for this test)
-	extensions := []pkix.Extension{}
+	var extensions []pkix.Extension
 
 	// Define the expected public key algorithm
 	algorithmID := x509.RSA
@@ -172,7 +172,7 @@ func TestFindCertificateIssuerWithWrongRDNSequenceBytes(t *testing.T) {
 	}
 
 	// Create a sample list of extensions (empty for this test)
-	extensions := []pkix.Extension{}
+	var extensions []pkix.Extension
 
 	// Define the expected public key algorithm
 	algorithmID := x509.RSA
@@ -215,7 +215,7 @@ func TestFindCertificateIssuerWithWrongRDNSequenceBytes(t *testing.T) {
 }
 
 var oidMap = map[string]asn1.ObjectIdentifier{
-	extensionsupport.OidCertExtAuthorityKeyId: asn1.ObjectIdentifier{2, 5, 29, 35},
+	extensionsupport.OidCertExtAuthorityKeyId: {2, 5, 29, 35},
 }
 
 func TestFindCertificateIssuerCandidatesWithKeyIdentifier(t *testing.T) {
@@ -229,7 +229,7 @@ func TestFindCertificateIssuerCandidatesWithKeyIdentifier(t *testing.T) {
 		},
 	}
 	// Create a sample list of extensions (empty for this test)
-	extensions := []pkix.Extension{}
+	var extensions []pkix.Extension
 
 	// Define the expected public key algorithm
 	algorithmID := x509.RSA

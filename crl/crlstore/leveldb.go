@@ -161,7 +161,7 @@ func (S *LevelDbStore) IsEmpty() bool {
 	return false
 }
 
-func (S *LevelDbStore) Update(store interface{}) error {
+func (S *LevelDbStore) Update(store CRLStore) error {
 	var levelDbNew, ok = store.(*LevelDbStore)
 	if ok == false {
 		return errors.New("invalid update store type")

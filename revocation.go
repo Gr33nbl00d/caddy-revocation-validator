@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	caddy.RegisterModule(CertRevocationValidator{})
+	caddy.RegisterModule(&CertRevocationValidator{})
 }
 
 // CertRevocationValidator Allows checking of client certificate revocation status based on CRL or OCSP
@@ -35,7 +35,7 @@ type CertRevocationValidator struct {
 	ModeParsed            config.RevocationCheckMode `json:"-"`
 }
 
-func (c CertRevocationValidator) CaddyModule() caddy.ModuleInfo {
+func (c *CertRevocationValidator) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID: "tls.client_auth.verifier.revocation",
 		New: func() caddy.Module {
@@ -84,10 +84,10 @@ func validateConfig(c *CertRevocationValidator) error {
 	}
 	if isCRLCheckingEnabled(c) {
 		if c.CRLConfig == nil {
-			return errors.New("For CRL checking a working directory need to be defined in crl_config")
+			return errors.New("for CRL checking a working directory need to be defined in crl_config")
 		} else {
 			if c.CRLConfig.WorkDir == "" {
-				return errors.New("For CRL checking a working directory need to be defined in crl_config")
+				return errors.New("for CRL checking a working directory need to be defined in crl_config")
 			}
 			stat, err := os.Stat(c.CRLConfig.WorkDir)
 			if err != nil {
@@ -116,13 +116,13 @@ func (c *CertRevocationValidator) Cleanup() error {
 }
 
 func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	config, err := parseConfigFromCaddyfile(d)
+	caddyConfig, err := parseConfigFromCaddyfile(d)
 	if err != nil {
 		return err
 	}
-	c.OCSPConfig = config.OCSPConfig
-	c.CRLConfig = config.CRLConfig
-	c.Mode = config.Mode
+	c.OCSPConfig = caddyConfig.OCSPConfig
+	c.CRLConfig = caddyConfig.CRLConfig
+	c.Mode = caddyConfig.Mode
 	err = validateConfig(c)
 	if err != nil {
 		return err

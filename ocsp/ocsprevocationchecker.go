@@ -9,10 +9,11 @@ import (
 	"github.com/gr33nbl00d/caddy-revocation-validator/config"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core/asn1parser"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
 	"github.com/muesli/cache2go"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ocsp"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -150,8 +151,8 @@ func (c *OCSPRevocationChecker) executeHttpRequest(ocspServer string, clientCert
 	if err != nil {
 		return nil, err
 	}
-	defer httpResponse.Body.Close()
-	output, err := ioutil.ReadAll(httpResponse.Body)
+	defer utils.CloseWithErrorHandling(httpResponse.Body.Close)
+	output, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
 		return nil, err
 	}

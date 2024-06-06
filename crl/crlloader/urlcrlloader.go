@@ -50,12 +50,12 @@ func (L *URLLoader) downloadCRL(url string, filePath string) error {
 	if err != nil {
 		return err
 	}
-	defer crlFile.Close()
+	defer utils.CloseWithErrorHandling(crlFile.Close)
 	httpRequest, err := http.Get(url)
 	if err != nil {
 		return err
 	}
-	defer httpRequest.Body.Close()
+	defer utils.CloseWithErrorHandling(httpRequest.Body.Close)
 	_, err = io.Copy(crlFile, httpRequest.Body)
 	if err != nil {
 		return err

@@ -14,7 +14,7 @@ type HashingReaderWrapper struct {
 	hash               hash.Hash
 }
 
-func (t HashingReaderWrapper) Read(bytes []byte) (int, error) {
+func (t *HashingReaderWrapper) Read(bytes []byte) (int, error) {
 	byteCount, err := t.Reader.Read(bytes)
 	if t.CalculateSignature == true && err == nil {
 		if byteCount == len(bytes) {
@@ -31,7 +31,7 @@ func (t HashingReaderWrapper) Read(bytes []byte) (int, error) {
 	return byteCount, err
 }
 
-func (t HashingReaderWrapper) Peek(count int) ([]byte, error) {
+func (t *HashingReaderWrapper) Peek(count int) ([]byte, error) {
 	return t.Reader.Peek(count)
 }
 
@@ -49,7 +49,7 @@ func (t HashingReaderWrapper) Reset(reader io.Reader) {
 	t.Reader.Reset(reader)
 }
 
-func (t HashingReaderWrapper) Discard(offset int64) error {
+func (t *HashingReaderWrapper) Discard(offset int64) error {
 	_, err := t.Reader.Discard(int(offset))
 	if err != nil {
 		return err

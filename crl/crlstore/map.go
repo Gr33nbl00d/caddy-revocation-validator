@@ -133,17 +133,22 @@ func (S *MapStore) IsEmpty() bool {
 	return len(S.Map) == 0
 }
 
-func (S *MapStore) Update(store interface{}) error {
+func (S *MapStore) Update(store CRLStore) error {
 	var storeNew, ok = store.(*MapStore)
 	if ok == false {
 		return errors.New("invalid update store type")
 	}
-	S.Map = storeNew.Map
+	// Copy the map from storeNew to S
+	S.Map = make(map[string][]byte)
+	for k, v := range storeNew.Map {
+		S.Map[k] = v
+	}
 	storeNew.close()
 	return nil
 }
 
 func (S *MapStore) Close() {
+	//Nothing to do on close
 }
 
 func (S *MapStore) Delete() error {

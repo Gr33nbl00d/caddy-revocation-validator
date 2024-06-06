@@ -6,6 +6,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/hex"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
 	"github.com/gr33nbl00d/caddy-revocation-validator/testhelper"
 	"math/big"
@@ -209,7 +210,7 @@ func TestASN1Serializer_SerializeSignatureCert(t *testing.T) {
 func TestASN1Serializer_DeserializeSignatureCert(t *testing.T) {
 	crtFile, err := os.Open(testhelper.GetTestDataFilePath("testcert.der"))
 	assert.NoError(t, err)
-	defer crtFile.Close()
+	defer utils.CloseWithErrorHandling(crtFile.Close)
 	if err != nil {
 		t.Errorf("error occured %v", err)
 	}

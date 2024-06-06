@@ -7,6 +7,7 @@ import (
 	"github.com/gr33nbl00d/caddy-revocation-validator/config"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core/asn1parser"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlloader"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlstore"
@@ -131,7 +132,7 @@ func (R *Repository) loadCRL(entry *Entry, chains *core.CertificateChains) (err 
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tempFileName)
+	defer utils.CloseWithErrorHandling(func() error { return os.Remove(tempFileName) })
 	err = entry.CRLLoader.LoadCRL(tempFileName)
 	if err != nil {
 		return err
@@ -183,7 +184,7 @@ func (R *Repository) addNewEmptyEntry(loader crlloader.CRLLoader, identifier str
 
 func (R *Repository) createTempFile() (string, error) {
 	tempFile, err := os.CreateTemp(R.crlConfig.WorkDir, "crl_*_tmp")
-	defer tempFile.Close()
+	defer utils.CloseWithErrorHandling(tempFile.Close)
 	if err != nil {
 		return "", err
 	}
@@ -292,7 +293,7 @@ func (R *Repository) updateCrlEntry(entry *Entry, newChains *core.CertificateCha
 			}
 		}
 	}()
-	defer os.Remove(tempFileName)
+	defer utils.CloseWithErrorHandling(func() error { return os.Remove(tempFileName) })
 
 	var chains = newChains
 
@@ -531,9 +532,13 @@ func (R *Repository) Close() {
 	R.crlRepositoryLock.Lock()
 	defer R.crlRepositoryLock.Unlock()
 	for id, entry := range R.crlRepository {
-		entry.entryLock.Lock()
-		defer entry.entryLock.Unlock()
-		entry.CRLStore.Close()
-		R.crlRepository[id] = nil
+		R.closeRepositoryEntry(entry, id)
 	}
+}
+
+func (R *Repository) closeRepositoryEntry(entry *Entry, id string) {
+	entry.entryLock.Lock()
+	defer entry.entryLock.Unlock()
+	entry.CRLStore.Close()
+	R.crlRepository[id] = nil
 }

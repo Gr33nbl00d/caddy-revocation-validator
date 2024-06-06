@@ -31,31 +31,38 @@ func parseConfigFromCaddyfile(d *caddyfile.Dispenser) (*CertRevocationValidatorC
 	for d.Next() {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			key := d.Val()
-
-			switch key {
-			case "mode":
-				if !d.NextArg() {
-					return nil, d.ArgErr()
-				}
-				certRevocationValidatorConfig.Mode = d.Val()
-			case "crl_config":
-				crlConfig, err := parseCaddyfileCRLConfig(d)
-				if err != nil {
-					return nil, err
-				}
-				certRevocationValidatorConfig.CRLConfig = crlConfig
-			case "ocsp_config":
-				ocspConfig, err := parseCaddyfileOCSPConfig(d)
-				if err != nil {
-					return nil, err
-				}
-				certRevocationValidatorConfig.OCSPConfig = ocspConfig
-			default:
-				return nil, d.Errf("unknown subdirective for the revocation verifier: %s", key)
+			validatorConfig, err, done := parseConfigEntryFromCaddyfile(d, key, certRevocationValidatorConfig)
+			if done {
+				return validatorConfig, err
 			}
 		}
 	}
 	return &certRevocationValidatorConfig, nil
+}
+
+func parseConfigEntryFromCaddyfile(d *caddyfile.Dispenser, key string, certRevocationValidatorConfig CertRevocationValidatorConfig) (*CertRevocationValidatorConfig, error, bool) {
+	switch key {
+	case "mode":
+		if !d.NextArg() {
+			return nil, d.ArgErr(), true
+		}
+		certRevocationValidatorConfig.Mode = d.Val()
+	case "crl_config":
+		crlConfig, err := parseCaddyfileCRLConfig(d)
+		if err != nil {
+			return nil, err, true
+		}
+		certRevocationValidatorConfig.CRLConfig = crlConfig
+	case "ocsp_config":
+		ocspConfig, err := parseCaddyfileOCSPConfig(d)
+		if err != nil {
+			return nil, err, true
+		}
+		certRevocationValidatorConfig.OCSPConfig = ocspConfig
+	default:
+		return nil, d.Errf("unknown subdirective for the revocation verifier: %s", key), true
+	}
+	return nil, nil, false
 }
 
 func parseCaddyfileOCSPConfig(d *caddyfile.Dispenser) (*config.OCSPConfig, error) {
@@ -87,58 +94,66 @@ func parseCaddyfileOCSPConfig(d *caddyfile.Dispenser) (*config.OCSPConfig, error
 func parseCaddyfileCRLConfig(d *caddyfile.Dispenser) (*config.CRLConfig, error) {
 	crlConfig := config.CRLConfig{}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
-		switch d.Val() {
-		case "work_dir":
-			if !d.NextArg() {
-				return nil, d.ArgErr()
-			}
-			crlConfig.WorkDir = d.Val()
-		case "cdp_config":
-			cdpConfig, err := parseCaddyfileCRLCDPConfig(d)
-			if err != nil {
-				return nil, err
-			}
-			crlConfig.CDPConfig = cdpConfig
-		case "storage_type":
-			if !d.NextArg() {
-				return nil, d.ArgErr()
-			}
-			crlConfig.StorageType = d.Val()
-		case "update_interval":
-			if !d.NextArg() {
-				return nil, d.ArgErr()
-			}
-
-			crlConfig.UpdateInterval = d.Val()
-		case "signature_validation_mode":
-			if !d.NextArg() {
-				return nil, d.ArgErr()
-			}
-
-			crlConfig.SignatureValidationMode = d.Val()
-		case "crl_url":
-			if !d.NextArg() {
-				return nil, d.ArgErr()
-			}
-
-			crlConfig.CRLUrls = append(crlConfig.CRLUrls, d.Val())
-		case "crl_file":
-			if !d.NextArg() {
-				return nil, d.ArgErr()
-			}
-
-			crlConfig.CRLFiles = append(crlConfig.CRLFiles, d.Val())
-		case "trusted_signature_cert_file":
-			if !d.NextArg() {
-				return nil, d.ArgErr()
-			}
-
-			crlConfig.TrustedSignatureCertsFiles = append(crlConfig.TrustedSignatureCertsFiles, d.Val())
-		default:
-			return nil, d.Errf("unknown subdirective for the crl config in the revocation verifier: %s", d.Val())
+		c, err, done := parseCaddyFileCrlConfigEntry(d, crlConfig)
+		if done {
+			return c, err
 		}
 	}
 	return &crlConfig, nil
+}
+
+func parseCaddyFileCrlConfigEntry(d *caddyfile.Dispenser, crlConfig config.CRLConfig) (*config.CRLConfig, error, bool) {
+	switch d.Val() {
+	case "work_dir":
+		if !d.NextArg() {
+			return nil, d.ArgErr(), true
+		}
+		crlConfig.WorkDir = d.Val()
+	case "cdp_config":
+		cdpConfig, err := parseCaddyfileCRLCDPConfig(d)
+		if err != nil {
+			return nil, err, true
+		}
+		crlConfig.CDPConfig = cdpConfig
+	case "storage_type":
+		if !d.NextArg() {
+			return nil, d.ArgErr(), true
+		}
+		crlConfig.StorageType = d.Val()
+	case "update_interval":
+		if !d.NextArg() {
+			return nil, d.ArgErr(), true
+		}
+
+		crlConfig.UpdateInterval = d.Val()
+	case "signature_validation_mode":
+		if !d.NextArg() {
+			return nil, d.ArgErr(), true
+		}
+
+		crlConfig.SignatureValidationMode = d.Val()
+	case "crl_url":
+		if !d.NextArg() {
+			return nil, d.ArgErr(), true
+		}
+
+		crlConfig.CRLUrls = append(crlConfig.CRLUrls, d.Val())
+	case "crl_file":
+		if !d.NextArg() {
+			return nil, d.ArgErr(), true
+		}
+
+		crlConfig.CRLFiles = append(crlConfig.CRLFiles, d.Val())
+	case "trusted_signature_cert_file":
+		if !d.NextArg() {
+			return nil, d.ArgErr(), true
+		}
+
+		crlConfig.TrustedSignatureCertsFiles = append(crlConfig.TrustedSignatureCertsFiles, d.Val())
+	default:
+		return nil, d.Errf("unknown subdirective for the crl config in the revocation verifier: %s", d.Val()), true
+	}
+	return nil, nil, false
 }
 
 func parseCaddyfileCRLCDPConfig(d *caddyfile.Dispenser) (*config.CDPConfig, error) {
