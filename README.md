@@ -83,34 +83,35 @@ Minimal JSON config for OCSP and CRL support via CDP/AIA
 }
 ```
 
+Revocation check support can be also configured in the caddyfile syntax:
+
 # Example caddyfile config
-```caddyfile
-  
-	client_auth {
-		mode                   require_and_verify
-		trusted_ca_cert_file   ./certificates/customerca.crt
-		verifier revocation {
-		    mode crl_only
-            crl_config {
-              work_dir "./crlworkdir"
-              storage_type memory
-              update_interval 30m
-              signature_validation_mode verify_log
-              trusted_signature_cert_file "./certificates/customerca.crt"
-              cdp_config {
-                crl_fetch_mode fetch_actively
-                crl_cdp_strict true
-              }
-            }
-            ocsp_config {
-              default_cache_duration 30m
-              ocsp_aia_strict true
-            }
-		}
-	}	
+```
+client_auth {
+  mode require_and_verify
+  trusted_ca_cert_file   ./certificates/customerca.crt
+  verifier revocation {
+    mode crl_only
+    crl_config {
+      work_dir      "./crlworkdir"
+      storage_type  memory
+      update_interval 30m
+      signature_validation_mode verify_log
+      trusted_signature_cert_file "./certificates/customerca.crt"
+        cdp_config {
+          crl_fetch_mode fetch_actively
+          crl_cdp_strict true
+        }
+    }
+    ocsp_config {
+      default_cache_duration 30m
+      ocsp_aia_strict true
+    }
+  }
+}	  
 ```
 
-# Full Config Example
+# Full JSON Config Example
 
 ```json
 "client_authentication": {
