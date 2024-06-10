@@ -230,6 +230,129 @@ func (suite *LevelDbStoreSuite) TestGetCRLLocations() {
 	assert.NotNil(suite.T(), returnedCrlLocations)
 	assert.Equal(suite.T(), expectedCrllocations, *returnedCrlLocations)
 }
+
+func (suite *LevelDbStoreSuite) TestCreateStore() {
+	factory := LevelDbStoreFactory{
+		Serializer: suite.serializer,
+		BasePath:   suite.store.BasePath,
+		Logger:     suite.logger,
+	}
+
+	// Test creating a non-temporary store
+	identifier := "non_temporary_store"
+	store, err := factory.CreateStore(identifier, false)
+	assert.NoError(suite.T(), err)
+
+	levelDbStore, ok := store.(*LevelDbStore)
+	assert.True(suite.T(), ok)
+	assert.Equal(suite.T(), identifier, levelDbStore.Identifier)
+	assert.Equal(suite.T(), suite.store.BasePath, levelDbStore.BasePath)
+	assert.NotNil(suite.T(), levelDbStore.Db)
+
+	// Verify the directory was created
+	_, err = os.Stat(levelDbStore.LevelDBPath)
+	assert.NoError(suite.T(), err)
+
+	// Clean up
+	err = levelDbStore.Db.Close()
+	assert.NoError(suite.T(), err)
+	err = os.RemoveAll(levelDbStore.LevelDBPath)
+	assert.NoError(suite.T(), err)
+
+	// Test creating a temporary store
+	tempStore, err := factory.CreateStore(identifier, true)
+	assert.NoError(suite.T(), err)
+
+	levelDbTempStore, ok := tempStore.(*LevelDbStore)
+	assert.True(suite.T(), ok)
+	assert.Contains(suite.T(), levelDbTempStore.LevelDBPath, suite.store.BasePath)
+	assert.NotNil(suite.T(), levelDbTempStore.Db)
+
+	// Verify the temporary directory was created
+	_, err = os.Stat(levelDbTempStore.LevelDBPath)
+	assert.NoError(suite.T(), err)
+
+	// Clean up
+	err = levelDbTempStore.Db.Close()
+	assert.NoError(suite.T(), err)
+	err = os.RemoveAll(levelDbTempStore.LevelDBPath)
+	assert.NoError(suite.T(), err)
+}
+
+func (suite *LevelDbStoreSuite) TestUpdate() {
+	// Create a temporary directory for the new store
+	tempDir, err := os.MkdirTemp("", "leveldbtest")
+	assert.NoError(suite.T(), err)
+	defer os.RemoveAll(tempDir) // Clean up the temporary directory
+
+	// Create a new LevelDbStore instance to update from
+	identifier := "newstore"
+	levelDBPath := filepath.Join(tempDir, identifier)
+	db, err := leveldb.OpenFile(levelDBPath, nil)
+	assert.NoError(suite.T(), err)
+	newStore := &LevelDbStore{
+		Db:          db,
+		Serializer:  suite.store.Serializer,
+		Identifier:  identifier,
+		BasePath:    tempDir,
+		LevelDBPath: levelDBPath,
+		Logger:      suite.store.Logger,
+	}
+
+	// Add some dummy data to the new store
+	dummyKey := "dummy_key"
+	dummyValue := []byte("dummy_value")
+	hash := hashing.Sum64(dummyKey)
+	err = newStore.Db.Put(hash, dummyValue, nil)
+	assert.NoError(suite.T(), err)
+
+	// Call the Update method with the new store
+	err = suite.store.Update(newStore)
+	assert.NoError(suite.T(), err)
+
+	// Check if the data in the original store has been updated to match the data in the new store
+	retrievedValue, err := suite.store.Db.Get(hash, nil)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), dummyValue, retrievedValue)
+
+	// Ensure that the new store's database has been closed
+	_, err = newStore.Db.Get(hash, nil)
+	assert.Error(suite.T(), err, "leveldb: closed")
+
+	// Ensure that the old store's database has been closed
+	_, err = newStore.Db.Get(hash, nil)
+	assert.Error(suite.T(), err, "leveldb: closed")
+}
+
+func (suite *LevelDbStoreSuite) TestDelete() {
+	// Add some dummy data to the store
+	dummyKey := "dummy_key"
+	dummyValue := []byte("dummy_value")
+	hash := hashing.Sum64(dummyKey)
+	err := suite.store.Db.Put(hash, dummyValue, nil)
+	assert.NoError(suite.T(), err)
+
+	// Ensure the dummy data is in the store
+	retrievedValue, err := suite.store.Db.Get(hash, nil)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), dummyValue, retrievedValue)
+
+	//close the store
+	suite.store.Close()
+
+	// Call the Delete method
+	err = suite.store.Delete()
+	assert.NoError(suite.T(), err)
+
+	// Check if the LevelDB path has been removed
+	_, err = os.Stat(suite.store.LevelDBPath)
+	assert.True(suite.T(), os.IsNotExist(err), "expected LevelDB path to be removed")
+
+	// Check if trying to get data from the store returns an error
+	_, err = suite.store.Db.Get(hash, nil)
+	assert.Error(suite.T(), err)
+}
+
 func TestLevelDbStoreSuite(t *testing.T) {
 	suite.Run(t, new(LevelDbStoreSuite))
 }
