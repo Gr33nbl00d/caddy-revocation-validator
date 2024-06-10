@@ -55,7 +55,7 @@ Install xcaddy :
 
 After xcaddy installation you can build caddy with this plugin by executing:
 
-```xcaddy build v2.6.1 --with github.com/gr33nbl00d/caddy-revocation-validator```
+```xcaddy build latest --with github.com/gr33nbl00d/caddy-revocation-validator```
 
 The easiest way to use this plugin is to enable client revocation support via CDP and AIA certificate extensions. This requires that the client certificates has either CDP or AIA or both extensions
 defined
