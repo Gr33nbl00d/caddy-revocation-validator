@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"errors"
 	"fmt"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core/asn1parser"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader/extensionsupport"
@@ -77,6 +78,24 @@ func NewCertificateChainsFromEntry(chainEntry *CertificateChainEntry) *Certifica
 }
 
 // FindCertificateIssuerCandidates Implementation according to rfc5280 section 5.2.1
+func FindCertificateIssuerCandidates(issuer *pkix.RDNSequence, extensions *[]pkix.Extension, algorithmID x509.PublicKeyAlgorithm, chains *CertificateChains) ([]*CertificateChainEntry, error) {
+	keyIdentifierExtension := extensionsupport.FindExtension(extensionsupport.OidCertExtAuthorityKeyId, extensions)
+	if keyIdentifierExtension == nil {
+		return findCertificateCandidatesByIssuerAndAlgorithm(issuer, algorithmID, chains)
+	} else {
+		authorityKeyIdentifier, err := parseKeyIdentifierFromExtension(keyIdentifierExtension)
+		if err != nil {
+			return nil, err
+		}
+		if authorityKeyIdentifier.AuthorityCertSerialNumber != nil && &authorityKeyIdentifier.AuthorityCertIssuer.Raw != nil {
+			return findCertificateBySerialAndIssuer(authorityKeyIdentifier, chains)
+		} else if authorityKeyIdentifier.KeyIdentifier != nil {
+			return findCertificateCandidatesFromKeyIdentifier(chains, authorityKeyIdentifier)
+		} else {
+			return nil, errors.New("unsupported Authority Key Identifier combination")
+		}
+	}
+}
 
 func findCertificateCandidatesFromKeyIdentifier(verifiedChains *CertificateChains, authorityKeyIdentifier *extensionsupport.AuthorityKeyIdentifier) ([]*CertificateChainEntry, error) {
 	var certificateCandidates = make([]*CertificateChainEntry, 0)
