@@ -7,6 +7,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
+	"log"
+	"strings"
 	"testing"
 	"time"
 )
@@ -71,4 +73,76 @@ func TestRetryWith2Retries(t *testing.T) {
 	err := Retry(attempts, sleepTime, logger, mockRetry.mockFunction)
 	assert.Equals(t, 3, retryMessageCount)
 	assert.Nil(t, err)
+}
+
+// Mocking log output
+type LogCapture struct {
+	Messages []string
+}
+
+func (lc *LogCapture) Write(p []byte) (n int, err error) {
+	lc.Messages = append(lc.Messages, strings.TrimSpace(string(p)))
+	return len(p), nil
+}
+
+// Helper function to reset the log capture
+func captureLogs() (*LogCapture, func()) {
+	logCapture := &LogCapture{}
+	log.SetOutput(logCapture)
+	return logCapture, func() {
+		log.SetOutput(nil) // Restore default output after test
+	}
+}
+
+func TestCloseWithErrorHandling_AllSuccessful(t *testing.T) {
+	logCapture, reset := captureLogs()
+	defer reset()
+
+	CloseWithErrorHandling(
+		func() error { return nil },
+		func() error { return nil },
+	)
+
+	assert.Equals(t, 0, len(logCapture.Messages), "expected no log messages")
+}
+
+func TestCloseWithErrorHandling_OneError(t *testing.T) {
+	logCapture, reset := captureLogs()
+	defer reset()
+
+	CloseWithErrorHandling(
+		func() error { return errors.New("close error 1") },
+		func() error { return nil },
+	)
+
+	assert.Equals(t, 1, len(logCapture.Messages), "expected a log message")
+	assert.True(t, strings.Contains(logCapture.Messages[0], "error(s) occurred while closing files: close error 1"))
+}
+
+func TestCloseWithErrorHandling_MultipleErrors(t *testing.T) {
+	logCapture, reset := captureLogs()
+	defer reset()
+
+	CloseWithErrorHandling(
+		func() error { return errors.New("close error 1") },
+		func() error { return errors.New("close error 2") },
+	)
+
+	assert.Equals(t, 1, len(logCapture.Messages), "expected a log message")
+	assert.True(t, strings.Contains(logCapture.Messages[0], "error(s) occurred while closing files: close error 1; close error 2"))
+}
+
+func TestCloseWithErrorHandling_MixedSuccessAndErrors(t *testing.T) {
+	logCapture, reset := captureLogs()
+	defer reset()
+
+	CloseWithErrorHandling(
+		func() error { return nil },
+		func() error { return errors.New("close error 1") },
+		func() error { return nil },
+		func() error { return errors.New("close error 2") },
+	)
+
+	assert.Equals(t, 1, len(logCapture.Messages), "expected a log message")
+	assert.True(t, strings.Contains(logCapture.Messages[0], "error(s) occurred while closing files: close error 1; close error 2"))
 }
