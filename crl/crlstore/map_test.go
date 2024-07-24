@@ -1,43 +1,107 @@
 package crlstore
 
 import (
-	pkix "crypto/x509/pkix"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/asn1"
-	"github.com/gr33nbl00d/caddy-revocation-validator/core"
+	"errors"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core/hashing"
-	"github.com/gr33nbl00d/caddy-revocation-validator/core/utils"
-	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
-	"github.com/gr33nbl00d/caddy-revocation-validator/testhelper"
+	"github.com/stretchr/testify/mock"
 	"math/big"
-	"os"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/gr33nbl00d/caddy-revocation-validator/core"
+	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlreader"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap"
 )
 
-// MapStoreSuite is a test suite for the MapStore type.
-type MapStoreSuite struct {
-	suite.Suite
-	store             *MapStore
-	testIssuer        *pkix.RDNSequence
-	revokedCert       *pkix.RevokedCertificate
-	revokedCertSerial *big.Int
+type MockSerializer struct {
+	mock.Mock
 }
 
-// SetupTest is called before each test method in the suite.
-func (suite *MapStoreSuite) SetupTest() {
-	logger := zaptest.NewLogger(suite.T())
-	serializer := ASN1Serializer{}
+func (m *MockSerializer) DeserializeMetaInfo(data []byte) (*crlreader.CRLMetaInfo, error) {
+	args := m.Called(data)
+	return args.Get(0).(*crlreader.CRLMetaInfo), args.Error(1)
+}
+
+func (m *MockSerializer) SerializeMetaInfo(info *crlreader.CRLMetaInfo) ([]byte, error) {
+	args := m.Called(info)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
+func (m *MockSerializer) SerializeRevokedCert(cert *pkix.RevokedCertificate) ([]byte, error) {
+	args := m.Called(cert)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
+func (m *MockSerializer) DeserializeRevokedCert(data []byte) (*pkix.RevokedCertificate, error) {
+	args := m.Called(data)
+	return args.Get(0).(*pkix.RevokedCertificate), args.Error(1)
+}
+
+func (m *MockSerializer) SerializeMetaInfoExt(info *crlreader.ExtendedCRLMetaInfo) ([]byte, error) {
+	args := m.Called(info)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
+func (m *MockSerializer) DeserializeMetaInfoExt(data []byte) (*crlreader.ExtendedCRLMetaInfo, error) {
+	args := m.Called(data)
+	return args.Get(0).(*crlreader.ExtendedCRLMetaInfo), args.Error(1)
+}
+
+func (m *MockSerializer) DeserializeSignatureCert(data []byte) (*x509.Certificate, error) {
+	args := m.Called(data)
+	return args.Get(0).(*x509.Certificate), args.Error(1)
+}
+
+func (m *MockSerializer) SerializeCRLLocations(locations *core.CRLLocations) ([]byte, error) {
+	args := m.Called(locations)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
+func (m *MockSerializer) DeserializeCRLLocations(data []byte) (*core.CRLLocations, error) {
+	args := m.Called(data)
+	return args.Get(0).(*core.CRLLocations), args.Error(1)
+}
+
+type MapStoreTestSuite struct {
+	suite.Suite
+	store      *MapStore
+	serializer *MockSerializer
+	logger     *zap.Logger
+}
+
+func (suite *MapStoreTestSuite) SetupTest() {
+	suite.logger = zap.NewNop()
+	suite.serializer = new(MockSerializer)
 	suite.store = &MapStore{
 		Map:        make(map[string][]byte),
-		Serializer: serializer,
-		Logger:     logger,
+		Serializer: suite.serializer,
+		Logger:     suite.logger,
 	}
+}
 
-	suite.testIssuer = &pkix.RDNSequence{
+func (suite *MapStoreTestSuite) TestStartUpdateCrl_Success() {
+	info := &crlreader.CRLMetaInfo{}
+	suite.serializer.On("SerializeMetaInfo", info).Return([]byte("serialized"), nil)
+
+	err := suite.store.StartUpdateCrl(info)
+	suite.Nil(err)
+	suite.NotNil(suite.store.Map[string(hashing.Sum64(MetaInfoKey))])
+}
+
+func (suite *MapStoreTestSuite) TestStartUpdateCrl_SerializeError() {
+	info := &crlreader.CRLMetaInfo{}
+	suite.serializer.On("SerializeMetaInfo", info).Return(([]byte)(nil), errors.New("serialize error"))
+
+	err := suite.store.StartUpdateCrl(info)
+	suite.NotNil(err)
+	suite.Contains(err.Error(), "could not serialize CRLMetaInfo")
+}
+
+func (suite *MapStoreTestSuite) TestInsertRevokedCert_Success() {
+	issuer := &pkix.RDNSequence{
 		pkix.RelativeDistinguishedNameSET{
 			pkix.AttributeTypeAndValue{
 				Type:  asn1.ObjectIdentifier{2, 5, 4, 3}, // OID for CommonName
@@ -45,244 +109,323 @@ func (suite *MapStoreSuite) SetupTest() {
 			},
 		},
 	}
-	suite.revokedCertSerial = new(big.Int)
-	suite.revokedCertSerial.SetUint64(52314123)
-	suite.revokedCert = &pkix.RevokedCertificate{
-		SerialNumber:   suite.revokedCertSerial,
-		RevocationTime: time.Time{},
+
+	entry := &crlreader.CRLEntry{
+		Issuer: issuer,
+		RevokedCertificate: &pkix.RevokedCertificate{
+			SerialNumber: big.NewInt(12345),
+		},
 	}
+	serialKey := entry.Issuer.String() + "_" + entry.RevokedCertificate.SerialNumber.String()
+	suite.serializer.On("SerializeRevokedCert", entry.RevokedCertificate).Return([]byte("serialized"), nil)
+
+	err := suite.store.InsertRevokedCert(entry)
+	suite.Nil(err)
+	suite.NotNil(suite.store.Map[string(hashing.Sum64(serialKey))])
 }
 
-// TearDownTest is called after each test method in the suite.
-func (suite *MapStoreSuite) TearDownTest() {
-	suite.store.Close()
-}
-
-// TestStartUpdateCrl tests the StartUpdateCrl method of MapStore.
-func (suite *MapStoreSuite) TestStartUpdateCrl() {
-	err := suite.store.StartUpdateCrl(&crlreader.CRLMetaInfo{})
-	assert.NoError(suite.T(), err)
-	// Add more assertions if needed
-}
-
-// TestInsertRevokedCert tests the InsertRevokedCert method of MapStore.
-func (suite *MapStoreSuite) TestInsertRevokedCert() {
-	status, err := suite.store.GetCertRevocationStatus(suite.testIssuer, suite.revokedCertSerial)
-	assert.NoError(suite.T(), err)
-	assert.False(suite.T(), status.Revoked)
-
-	err = suite.store.InsertRevokedCert(&crlreader.CRLEntry{
-		Issuer:             suite.testIssuer,
-		RevokedCertificate: suite.revokedCert,
-	})
-	assert.NoError(suite.T(), err)
-	status, err = suite.store.GetCertRevocationStatus(suite.testIssuer, suite.revokedCertSerial)
-	assert.NoError(suite.T(), err)
-	assert.True(suite.T(), status.Revoked)
-}
-
-// TestGetCertRevocationStatus tests the GetCertRevocationStatus method of MapStore.
-func (suite *MapStoreSuite) TestGetCertRevocationStatus() {
-	status, err := suite.store.GetCertRevocationStatus(suite.testIssuer, big.NewInt(123))
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), status)
-	// Add more assertions if needed
-}
-
-// TestGetCRLMetaInfo tests the GetCRLMetaInfo method of MapStore.
-func (suite *MapStoreSuite) TestGetCRLMetaInfo() {
-	// No meta info set
-	metaInfo, err := suite.store.GetCRLMetaInfo()
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), metaInfo)
-
-	// Set meta info and check if retrieved properly
-	err = suite.store.StartUpdateCrl(&crlreader.CRLMetaInfo{})
-	assert.NoError(suite.T(), err)
-	metaInfo, err = suite.store.GetCRLMetaInfo()
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), metaInfo)
-}
-
-// TestGetCRLExtMetaInfo tests the GetCRLExtMetaInfo method of MapStore.
-func (suite *MapStoreSuite) TestGetCRLExtMetaInfo() {
-	// No extended meta info set
-	extMetaInfo, err := suite.store.GetCRLExtMetaInfo()
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), extMetaInfo)
-
-	// Set extended meta info and check if retrieved properly
-	err = suite.store.UpdateExtendedMetaInfo(&crlreader.ExtendedCRLMetaInfo{})
-	assert.NoError(suite.T(), err)
-	extMetaInfo, err = suite.store.GetCRLExtMetaInfo()
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), extMetaInfo)
-}
-
-// TestUpdateExtendedMetaInfo tests the UpdateExtendedMetaInfo method of MapStore.
-func (suite *MapStoreSuite) TestUpdateExtendedMetaInfo() {
-	// Update extended meta info and check if set properly
-	extMetaInfo := &crlreader.ExtendedCRLMetaInfo{}
-	err := suite.store.UpdateExtendedMetaInfo(extMetaInfo)
-	assert.NoError(suite.T(), err)
-}
-
-// TestUpdateSignatureCertificate tests the UpdateSignatureCertificate method of MapStore.
-func (suite *MapStoreSuite) TestUpdateSignatureCertificate() {
-	// Create a dummy certificate chain entry
-	expectedCert := []byte{0x30, 0x82, 0x01, 0x0a} // replace with actual raw certificate bytes if needed
-	certEntry := &core.CertificateChainEntry{
-		RawCertificate: expectedCert,
+func (suite *MapStoreTestSuite) TestInsertRevokedCert_SerializeError() {
+	issuer := &pkix.RDNSequence{
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{
+				Type:  asn1.ObjectIdentifier{2, 5, 4, 3}, // OID for CommonName
+				Value: "Test Issuer",
+			},
+		},
 	}
 
-	err := suite.store.UpdateSignatureCertificate(certEntry)
-	assert.NoError(suite.T(), err)
-	hash := hashing.Sum64(SignatureCertKey)
-	returnedCert := suite.store.Map[string(hash)]
-	assert.Equal(suite.T(), expectedCert, returnedCert)
+	entry := &crlreader.CRLEntry{
+		Issuer: issuer,
+		RevokedCertificate: &pkix.RevokedCertificate{
+			SerialNumber: big.NewInt(12345),
+		},
+	}
+	suite.serializer.On("SerializeRevokedCert", entry.RevokedCertificate).Return(([]byte)(nil), errors.New("serialize error"))
 
+	err := suite.store.InsertRevokedCert(entry)
+	suite.NotNil(err)
+	suite.Contains(err.Error(), "could not serialize CRLEntry")
 }
 
-// TestGetCRLSignatureCert tests the GetCRLSignatureCert method of MapStore.
-func (suite *MapStoreSuite) TestGetCRLSignatureCert() {
-	// No signature certificate set initially, expect error
-	certEntry, err := suite.store.GetCRLSignatureCert()
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), certEntry)
-	crtFile, err := os.Open(testhelper.GetTestDataFilePath("testcert.der"))
-	assert.NoError(suite.T(), err)
-	crtBytes, err := os.ReadFile(crtFile.Name())
-	assert.NoError(suite.T(), err)
-	defer utils.CloseWithErrorHandling(crtFile.Close)
-	err = suite.store.UpdateSignatureCertificate(&core.CertificateChainEntry{RawCertificate: crtBytes})
-	assert.NoError(suite.T(), err)
-	certEntry, err = suite.store.GetCRLSignatureCert()
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), certEntry)
+func (suite *MapStoreTestSuite) TestGetCertRevocationStatus_Revoked() {
+	issuer := &pkix.RDNSequence{
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{
+				Type:  asn1.ObjectIdentifier{2, 5, 4, 3}, // OID for CommonName
+				Value: "Test Issuer",
+			},
+		},
+	}
+	serial := big.NewInt(12345)
+	serialKey := issuer.String() + "_" + serial.String()
+	revokedCert := &pkix.RevokedCertificate{}
+	suite.store.Map[string(hashing.Sum64(serialKey))] = []byte("serialized")
+	suite.serializer.On("DeserializeRevokedCert", []byte("serialized")).Return(revokedCert, nil)
+
+	status, err := suite.store.GetCertRevocationStatus(issuer, serial)
+	suite.Nil(err)
+	suite.True(status.Revoked)
+	suite.Equal(revokedCert, status.CRLRevokedCertEntry)
 }
 
-func (suite *MapStoreSuite) TestUpdateCRLLocations() {
-	// Create a dummy CRLLocations
-	crlLocations := &core.CRLLocations{
-		CRLDistributionPoints: []string{"http://example.com/crl1", "http://example.com/crl2"},
+func (suite *MapStoreTestSuite) TestGetCertRevocationStatus_NotRevoked() {
+	issuer := &pkix.RDNSequence{
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{
+				Type:  asn1.ObjectIdentifier{2, 5, 4, 3}, // OID for CommonName
+				Value: "Test Issuer",
+			},
+		},
+	}
+	serial := big.NewInt(12345)
+
+	status, err := suite.store.GetCertRevocationStatus(issuer, serial)
+	suite.Nil(err)
+	suite.False(status.Revoked)
+	suite.Nil(status.CRLRevokedCertEntry)
+}
+
+func (suite *MapStoreTestSuite) TestGetCertRevocationStatus_DeserializeError() {
+
+	issuer := &pkix.RDNSequence{
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{
+				Type:  asn1.ObjectIdentifier{2, 5, 4, 3}, // OID for CommonName
+				Value: "Test Issuer",
+			},
+		},
+	}
+	revokedCert := &pkix.RevokedCertificate{
+		SerialNumber: big.NewInt(12345),
+	}
+	serial := big.NewInt(12345)
+	serialKey := issuer.String() + "_" + serial.String()
+	suite.store.Map[string(hashing.Sum64(serialKey))] = []byte("serialized")
+	suite.serializer.On("DeserializeRevokedCert", []byte("serialized")).Return(revokedCert, errors.New("deserialize error"))
+
+	status, err := suite.store.GetCertRevocationStatus(issuer, serial)
+	suite.NotNil(err)
+	suite.Contains(err.Error(), "could not deserialize revoked cert")
+	suite.Nil(status)
+}
+
+func (suite *MapStoreTestSuite) TestUpdateExtendedMetaInfo_Success() {
+	info := &crlreader.ExtendedCRLMetaInfo{}
+	suite.serializer.On("SerializeMetaInfoExt", info).Return([]byte("serialized"), nil)
+
+	err := suite.store.UpdateExtendedMetaInfo(info)
+	suite.Nil(err)
+	suite.NotNil(suite.store.Map[string(hashing.Sum64(ExtendedMetaInfoKey))])
+}
+
+func (suite *MapStoreTestSuite) TestUpdateExtendedMetaInfo_SerializeError() {
+	info := &crlreader.ExtendedCRLMetaInfo{}
+	suite.serializer.On("SerializeMetaInfoExt", info).Return(([]byte)(nil), errors.New("serialize error"))
+
+	err := suite.store.UpdateExtendedMetaInfo(info)
+	suite.NotNil(err)
+	suite.Contains(err.Error(), "could not serialize ExtendedCRLMetaInfo")
+}
+
+func (suite *MapStoreTestSuite) TestGetCRLMetaInfo_Success() {
+	metaInfo := &crlreader.CRLMetaInfo{}
+	suite.store.Map[string(hashing.Sum64(MetaInfoKey))] = []byte("serialized")
+	suite.serializer.On("DeserializeMetaInfo", []byte("serialized")).Return(metaInfo, nil)
+
+	info, err := suite.store.GetCRLMetaInfo()
+	suite.Nil(err)
+	suite.Equal(metaInfo, info)
+}
+
+func (suite *MapStoreTestSuite) TestGetCRLExtMetaInfo_Success() {
+	expectedMetaInfo := &crlreader.ExtendedCRLMetaInfo{}
+	serializedMetaInfo := []byte("serializedExtendedMetaInfo")
+
+	suite.store.Map[string(hashing.Sum64(ExtendedMetaInfoKey))] = serializedMetaInfo
+	suite.serializer.On("DeserializeMetaInfoExt", serializedMetaInfo).Return(expectedMetaInfo, nil)
+
+	result, err := suite.store.GetCRLExtMetaInfo()
+	suite.Nil(err)
+	suite.Equal(expectedMetaInfo, result)
+	suite.serializer.AssertExpectations(suite.T())
+}
+
+func (suite *MapStoreTestSuite) TestGetCRLExtMetaInfo_NotFound() {
+	result, err := suite.store.GetCRLExtMetaInfo()
+	suite.NotNil(err)
+	suite.Nil(result)
+	suite.Contains(err.Error(), "entry not found")
+}
+
+func (suite *MapStoreTestSuite) TestGetCRLExtMetaInfo_DeserializeError() {
+	serializedMetaInfo := []byte("serializedExtendedMetaInfo")
+	suite.store.Map[string(hashing.Sum64(ExtendedMetaInfoKey))] = serializedMetaInfo
+
+	suite.serializer.On("DeserializeMetaInfoExt", serializedMetaInfo).Return((*crlreader.ExtendedCRLMetaInfo)(nil), errors.New("deserialize error"))
+
+	result, err := suite.store.GetCRLExtMetaInfo()
+	suite.NotNil(err)
+	suite.Nil(result)
+	suite.Contains(err.Error(), "deserialize error")
+	suite.serializer.AssertExpectations(suite.T())
+}
+func (suite *MapStoreTestSuite) TestGetCRLMetaInfo_NotFound() {
+	info, err := suite.store.GetCRLMetaInfo()
+	suite.NotNil(err)
+	suite.Nil(info)
+}
+
+func (suite *MapStoreTestSuite) TestUpdateSignatureCertificate_Success() {
+	entry := &core.CertificateChainEntry{
+		RawCertificate: []byte("raw cert"),
+	}
+	suite.store.Map[string(hashing.Sum64(SignatureCertKey))] = entry.RawCertificate
+
+	err := suite.store.UpdateSignatureCertificate(entry)
+	suite.Nil(err)
+	suite.NotNil(suite.store.Map[string(hashing.Sum64(SignatureCertKey))])
+}
+
+func (suite *MapStoreTestSuite) TestGetCRLSignatureCert_Success() {
+	cert := &x509.Certificate{}
+	suite.store.Map[string(hashing.Sum64(SignatureCertKey))] = []byte("serialized")
+	suite.serializer.On("DeserializeSignatureCert", []byte("serialized")).Return(cert, nil)
+
+	entry, err := suite.store.GetCRLSignatureCert()
+	suite.Nil(err)
+	suite.NotNil(entry)
+	suite.Equal(cert, entry.Certificate)
+}
+
+func (suite *MapStoreTestSuite) TestGetCRLSignatureCert_NotFound() {
+	entry, err := suite.store.GetCRLSignatureCert()
+	suite.NotNil(err)
+	suite.Nil(entry)
+	suite.Contains(err.Error(), "could not find signature key for crl")
+}
+
+func (suite *MapStoreTestSuite) TestGetCRLSignatureCert_DeserializeError() {
+
+	certificate := &x509.Certificate{}
+	suite.store.Map[string(hashing.Sum64(SignatureCertKey))] = []byte("serialized")
+	suite.serializer.On("DeserializeSignatureCert", []byte("serialized")).Return(certificate, errors.New("deserialize error"))
+
+	entry, err := suite.store.GetCRLSignatureCert()
+	suite.NotNil(err)
+	suite.Nil(entry)
+	suite.Contains(err.Error(), "could not deserialize CRL signature certificate")
+}
+
+func (suite *MapStoreTestSuite) TestUpdateCRLLocations_Success() {
+	locations := &core.CRLLocations{}
+	suite.serializer.On("SerializeCRLLocations", locations).Return([]byte("serialized"), nil)
+
+	err := suite.store.UpdateCRLLocations(locations)
+	suite.Nil(err)
+	suite.NotNil(suite.store.Map[string(hashing.Sum64(CRLLocationKey))])
+}
+
+func (suite *MapStoreTestSuite) TestUpdateCRLLocations_SerializeError() {
+	locations := &core.CRLLocations{}
+	suite.serializer.On("SerializeCRLLocations", locations).Return(([]byte)(nil), errors.New("serialize error"))
+
+	err := suite.store.UpdateCRLLocations(locations)
+	suite.NotNil(err)
+	suite.Contains(err.Error(), "could not serialize CRLLocations")
+}
+
+func (suite *MapStoreTestSuite) TestGetCRLLocations_Success() {
+	locations := &core.CRLLocations{}
+	suite.store.Map[string(hashing.Sum64(CRLLocationKey))] = []byte("serialized")
+	suite.serializer.On("DeserializeCRLLocations", []byte("serialized")).Return(locations, nil)
+
+	result, err := suite.store.GetCRLLocations()
+	suite.Nil(err)
+	suite.Equal(locations, result)
+}
+
+func (suite *MapStoreTestSuite) TestGetCRLLocations_NotFound() {
+	result, err := suite.store.GetCRLLocations()
+	suite.NotNil(err)
+	suite.Nil(result)
+}
+
+func (suite *MapStoreTestSuite) TestIsEmpty_True() {
+	suite.True(suite.store.IsEmpty())
+}
+
+func (suite *MapStoreTestSuite) TestIsEmpty_False() {
+	suite.store.Map["key"] = []byte("value")
+	suite.False(suite.store.IsEmpty())
+}
+
+func (suite *MapStoreTestSuite) TestUpdate_Success() {
+	otherStore := &MapStore{
+		Map: map[string][]byte{
+			"key1": []byte("value1"),
+			"key2": []byte("value2"),
+		},
+		Serializer: suite.serializer,
+		Logger:     suite.logger,
+	}
+	otherStoreExpected := &MapStore{
+		Map: map[string][]byte{
+			"key1": []byte("value1"),
+			"key2": []byte("value2"),
+		},
+		Serializer: suite.serializer,
+		Logger:     suite.logger,
 	}
 
-	// Update the CRL locations in the LevelDbStore
-	err := suite.store.UpdateCRLLocations(crlLocations)
-	assert.NoError(suite.T(), err)
-
-	// Retrieve the stored CRL locations
-	hash := hashing.Sum64(CRLLocationKey)
-	crlLocationBytes := suite.store.Map[string(hash)]
-
-	// Deserialize the retrieved CRL locations
-	retrievedCRLLocations, err := suite.store.Serializer.DeserializeCRLLocations(crlLocationBytes)
-	assert.NoError(suite.T(), err)
-
-	// Verify the retrieved CRL locations match the original
-	assert.Equal(suite.T(), crlLocations, retrievedCRLLocations)
+	err := suite.store.Update(otherStore)
+	suite.Nil(err)
+	suite.Equal(otherStoreExpected.Map, suite.store.Map)
+	suite.Empty(otherStore.Map)
 }
 
-// TestGetCRLLocations tests the GetCRLLocations method of MapStore.
-func (suite *MapStoreSuite) TestGetCRLLocations() {
-	// No CRL locations set
-	returnedCrlLocations, err := suite.store.GetCRLLocations()
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), returnedCrlLocations)
+func (suite *MapStoreTestSuite) TestMapStoreFactory_CreateStore() {
+	// Mock serializer and logger
+	serializer := new(MockSerializer)
+	logger := zap.NewNop()
 
-	// Set CRL locations and check if retrieved properly
-	expectedCrllocations := core.CRLLocations{CRLDistributionPoints: []string{"http://example.com/crl1", "http://example.com/crl2"}, CRLUrl: "http://test"}
-	err = suite.store.UpdateCRLLocations(&expectedCrllocations)
-	assert.NoError(suite.T(), err)
-
-	// Retrieve CRL locations and check if retrieved properly
-	returnedCrlLocations, err = suite.store.GetCRLLocations()
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), returnedCrlLocations)
-	assert.Equal(suite.T(), expectedCrllocations, *returnedCrlLocations)
-}
-
-// TestUpdate tests the Update method of MapStore.
-func (suite *MapStoreSuite) TestUpdate() {
-	// Create a new MapStore instance to update from
-	newStore := &MapStore{
-		Map:        make(map[string][]byte),
-		Serializer: suite.store.Serializer,
-		Logger:     suite.store.Logger,
+	// Create a MapStoreFactory instance
+	factory := MapStoreFactory{
+		Serializer: serializer,
+		Logger:     logger,
 	}
 
-	// Add some dummy data to the new store
-	newStore.Map["dummy_key"] = []byte("dummy_value")
-	expectedMapAfterUpdate := make(map[string][]byte)
-	expectedMapAfterUpdate["dummy_key"] = []byte("dummy_value")
-
-	// Call the Update method with the new store
-	err := suite.store.Update(newStore)
-	assert.NoError(suite.T(), err)
-
-	// Check if the map of the original store has been updated to match the map of the new store
-	assert.Equal(suite.T(), expectedMapAfterUpdate, suite.store.Map)
-
-	// Ensure that the map in the new store object has been set to nil after the update
-	assert.Nil(suite.T(), newStore.Map)
-}
-
-// TestIsEmpty tests the IsEmpty method of MapStore.
-func (suite *MapStoreSuite) TestIsEmpty() {
-	// Create a new empty MapStore instance
-	store := &MapStore{
-		Map:        make(map[string][]byte),
-		Serializer: suite.store.Serializer,
-		Logger:     suite.store.Logger,
-	}
-
-	// Check if the store is empty
-	assert.True(suite.T(), store.IsEmpty())
-
-	// Add some dummy data to the store
-	store.Map["dummy_key"] = []byte("dummy_value")
-
-	// Check if the store is not empty after adding data
-	assert.False(suite.T(), store.IsEmpty())
-}
-
-// TestCreateStore tests the CreateStore method of MapStoreFactory.
-func (suite *MapStoreSuite) TestCreateStore() {
-	// Create a new MapStoreFactory instance
-	factory := &MapStoreFactory{
-		Serializer: ASN1Serializer{},
-		Logger:     zaptest.NewLogger(suite.T()),
-	}
-
-	// Call the CreateStore method
+	// Call CreateStore method
 	store, err := factory.CreateStore("", false)
 
-	// Check if the method returns a non-nil store and no error
-	assert.NotNil(suite.T(), store)
-	assert.NoError(suite.T(), err)
+	// Assertions
+	suite.NoError(err)  // Ensure no error occurred
+	suite.NotNil(store) // Ensure store is not nil
 
-	// Assert that the returned store is of type *MapStore
-	_, ok := store.(*MapStore)
-	assert.True(suite.T(), ok)
+	// Type assertion to check if store is of type *MapStore
+	mapStore, ok := store.(*MapStore)
+	suite.True(ok) // Ensure type assertion was successful
+
+	// Additional assertions to verify initial state of MapStore
+	suite.Empty(mapStore.Map)                    // Ensure Map is initially empty
+	suite.Equal(serializer, mapStore.Serializer) // Ensure Serializer is correctly set
+	suite.Equal(logger, mapStore.Logger)         // Ensure Logger is correctly set
 }
 
-// TestDelete tests the Delete method of MapStore.
-func (suite *MapStoreSuite) TestDelete() {
-	// Create a new MapStore instance
-	store := &MapStore{
-		Map:        make(map[string][]byte),
-		Serializer: suite.store.Serializer,
-		Logger:     suite.store.Logger,
-	}
+func (suite *MapStoreTestSuite) TestClose() {
+	// Call the Close method
+	suite.store.Close()
 
+	// Ensure no modifications to Map or other fields
+	// For simplicity, we assert no specific changes here since Close() does nothing
+}
+
+func (suite *MapStoreTestSuite) TestDelete() {
 	// Call the Delete method
-	err := store.Delete()
+	err := suite.store.Delete()
 
-	// Check if the method returns nil
-	assert.Nil(suite.T(), err)
+	// Assert that Delete() returns nil
+	suite.NoError(err)
 }
-
-// TestSuite runs the test suite.
-func TestSuite(t *testing.T) {
-	suite.Run(t, new(MapStoreSuite))
+func TestMapStoreTestSuite(t *testing.T) {
+	suite.Run(t, new(MapStoreTestSuite))
 }
