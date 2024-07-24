@@ -1,13 +1,10 @@
 package extensionsupport
 
 import (
-	"bufio"
-	"bytes"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
 	"fmt"
-	"github.com/gr33nbl00d/caddy-revocation-validator/core/asn1parser"
 	"math/big"
 )
 
@@ -29,35 +26,6 @@ type GeneralName struct {
 	UniformResourceIdentifier asn1.RawValue `asn1:"tag:6,ia5,optional"`
 	IPAddress                 asn1.RawValue `asn1:"tag:7,optional"`
 	RegisteredID              asn1.RawValue `asn1:"tag:8,optional"`
-}
-
-func (G GeneralName) GetGeneralNameType() (int, error) {
-	reader := bufio.NewReader(bytes.NewReader(G.Raw))
-	tagLength, err := asn1parser.PeekTagLength(reader, 0)
-	if err != nil {
-		return 0, err
-	}
-	if asn1parser.IsContextSpecificTag(tagLength) == false {
-		return -1, errors.New("generalname content is invalid")
-	}
-	lastContextSpecificTag, err := findLastRecursiveContextSpecificTagInOrder(nil, reader, 0)
-	if err != nil {
-		return 0, err
-	}
-	return asn1parser.GetContextSpecificTagId(lastContextSpecificTag), nil
-}
-
-func findLastRecursiveContextSpecificTagInOrder(previous *asn1parser.TagLength, reader *bufio.Reader, offset int) (*asn1parser.TagLength, error) {
-	//this coding is needed because asn1 parser of go has wrong handling of multiple nested optional fields.
-	//in this case rawcontent is not the content of the struct but content from the last parent sequence
-	tagLength, err := asn1parser.PeekTagLength(reader, offset)
-	if err != nil {
-		return nil, err
-	}
-	if asn1parser.IsContextSpecificTag(tagLength) {
-		return findLastRecursiveContextSpecificTagInOrder(tagLength, reader, offset+int(tagLength.CalculateTLLength().Int64()))
-	}
-	return previous, nil
 }
 
 const OidCertExtSubjectKeyId = "2.5.29.14"
