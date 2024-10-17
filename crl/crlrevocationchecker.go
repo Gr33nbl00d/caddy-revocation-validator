@@ -2,7 +2,6 @@ package crl
 
 import (
 	"crypto/x509"
-	"fmt"
 	"github.com/gr33nbl00d/caddy-revocation-validator/config"
 	"github.com/gr33nbl00d/caddy-revocation-validator/core"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl/crlrepository"
@@ -16,7 +15,7 @@ import (
 
 type CRLRevocationChecker struct {
 	crlRepository   *crlrepository.Repository
-	crlConfig       *config.CRLConfig
+	crlConfig       *config.CRLConfigParsed
 	logger          *zap.Logger
 	crlUpdateTicker *time.Ticker
 	crlUpdateStop   chan struct{}
@@ -34,7 +33,7 @@ func (c *CRLRevocationChecker) IsRevoked(clientCertificate *x509.Certificate, ve
 		if err != nil {
 			c.logger.Warn("Failed to add CRL from CDP", zap.Strings("cdp", clientCertificate.CRLDistributionPoints), zap.Error(err))
 		} else {
-			if added && c.crlConfig.CDPConfig.CRLFetchModeParsed == config.CRLFetchModeBackground {
+			if added && c.crlConfig.CDPConfigParsed.CRLFetchModeParsed == config.CRLFetchModeBackground {
 				go c.updateCRLs(true)
 			}
 		}
@@ -45,19 +44,16 @@ func (c *CRLRevocationChecker) IsRevoked(clientCertificate *x509.Certificate, ve
 	return revoked, err
 }
 
-func (c *CRLRevocationChecker) Provision(crlConfig *config.CRLConfig, logger *zap.Logger) error {
-	err := RegisterCRLWorkDirUsage(crlConfig)
-	if err != nil {
-		return err
-	}
+func (c *CRLRevocationChecker) Provision(crlConfig *config.CRLConfigParsed, logger *zap.Logger, configHash string) error {
+	var err error = nil
 	c.crlConfig = crlConfig
 	c.logger = logger
-	db := crlstore.Map
+	storeType := crlstore.Map
 	if crlConfig.StorageTypeParsed == config.Disk {
-		db = crlstore.LevelDB
+		storeType = crlstore.LevelDB
 	}
-	logger.Info("creating crl repository of type " + crlstore.StoreTypeToString(db))
-	err, c.crlRepository = crlrepository.NewCRLRepository(c.logger.Named("revocation"), crlConfig, db)
+	logger.Info("creating crl repository of type " + crlstore.StoreTypeToString(storeType))
+	err, c.crlRepository = crlrepository.NewCRLRepository(c.logger.Named("revocation"), crlConfig, storeType, configHash)
 	if err != nil {
 		return err
 	}
@@ -81,9 +77,6 @@ func (c *CRLRevocationChecker) Provision(crlConfig *config.CRLConfig, logger *za
 }
 
 func (c *CRLRevocationChecker) Cleanup() error {
-	if c.crlConfig != nil {
-		DeregisterCRLWorkDirUsage(c.crlConfig)
-	}
 	if c.crlRepository != nil {
 		c.crlRepository.Close()
 	}
@@ -180,25 +173,7 @@ func (c *CRLRevocationChecker) updateWasRecentlyFinished() bool {
 	return !lastCrlUpdateFinishTime.IsZero() && (time.Since(lastCrlUpdateFinishTime) < c.crlConfig.UpdateIntervalParsed/2)
 }
 
-func RegisterCRLWorkDirUsage(crlConfig *config.CRLConfig) error {
-	workDirInUseMutex.Lock()
-	defer workDirInUseMutex.Unlock()
-	if workDirsInUse[crlConfig.WorkDir] == 1 {
-		return fmt.Errorf("the same work dir %s was defined for multiple servers", crlConfig.WorkDir)
-	}
-	workDirsInUse[crlConfig.WorkDir] = 1
-	return nil
-}
-
-func DeregisterCRLWorkDirUsage(crlConfig *config.CRLConfig) {
-	workDirInUseMutex.Lock()
-	defer workDirInUseMutex.Unlock()
-	workDirsInUse[crlConfig.WorkDir] = 0
-}
-
 var (
-	workDirsInUse           = make(map[string]int)
-	workDirInUseMutex       sync.Mutex
 	crlUpdateMutex          sync.Mutex
 	lastCrlUpdateFinishTime time.Time
 )

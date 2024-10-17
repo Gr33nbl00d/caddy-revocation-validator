@@ -48,7 +48,11 @@ type CDPConfig struct {
 	// Configures how and when CRLs are downloaded for the first time
 	// Supported Values: 'fetch_actively', 'fetch_background'
 	// See: https://github.com/Gr33nbl00d/caddy-revocation-validator#crl_fetch_mode
-	CRLFetchModeParsed CRLFetchMode `json:"-"`
+}
+
+type CDPConfigParsed struct {
+	CRLFetchModeParsed CRLFetchMode
+	CRLCDPStrict       bool
 }
 
 type CRLConfig struct {
@@ -81,11 +85,17 @@ type CRLConfig struct {
 	// If the signature cert is part of the client cert chain there is no need to configure a certificate here.
 	// PEM and DER encoding are both supported
 	TrustedSignatureCertsFiles []string `json:"trusted_signature_certs_files,omitempty"`
+}
 
-	SignatureValidationModeParsed SignatureValidationMode `json:"-"`
-	StorageTypeParsed             StorageType             `json:"-"`
-	TrustedSignatureCerts         []*x509.Certificate     `json:"-"`
-	UpdateIntervalParsed          time.Duration           `json:"-"`
+type CRLConfigParsed struct {
+	SignatureValidationModeParsed SignatureValidationMode
+	StorageTypeParsed             StorageType
+	TrustedSignatureCerts         []*x509.Certificate
+	UpdateIntervalParsed          time.Duration
+	CDPConfigParsed               *CDPConfigParsed
+	WorkDir                       string
+	CRLUrls                       []string
+	CRLFiles                      []string
 }
 
 type OCSPConfig struct {
@@ -103,7 +113,10 @@ type OCSPConfig struct {
 	// one OCSP server defined can be contacted to check for revocation. Or a valid response of one of the OCSP server is inside the cache
 	// If no OCSP server can be contacted and no cached response is present or the validation of the OCSP response signature failed connection is denied.
 	OCSPAIAStrict bool `json:"ocsp_aia_strict,omitempty"`
+}
 
-	TrustedResponderCerts      []*x509.Certificate `json:"-"`
-	DefaultCacheDurationParsed time.Duration       `json:"-"`
+type OCSPConfigParsed struct {
+	TrustedResponderCerts      []*x509.Certificate
+	DefaultCacheDurationParsed time.Duration
+	OCSPAIAStrict              bool
 }

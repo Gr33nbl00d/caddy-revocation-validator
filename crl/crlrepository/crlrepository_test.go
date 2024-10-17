@@ -108,9 +108,9 @@ func (t TestingCRLLoaderFactory) CreatePreferredCrlLoader(crlLocations *core.CRL
 
 func TestNewCRLRepositoryOfTypeMap(t *testing.T) {
 	logger := zap.NewNop()
-	crlConfig := &config.CRLConfig{}
+	crlConfig := &config.CRLConfigParsed{}
 	storeType := crlstore.Map
-	err, repo := NewCRLRepository(logger, crlConfig, storeType)
+	err, repo := NewCRLRepository(logger, crlConfig, storeType, "")
 	assert.NoError(t, err)
 
 	assert.NotNil(t, repo)
@@ -135,11 +135,11 @@ func TestNewCRLRepositoryOfTypeLevelDB(t *testing.T) {
 	}
 	defer utils.CloseWithErrorHandling(func() error { return os.RemoveAll(tempDir) })
 	logger := zap.NewNop()
-	crlConfig := &config.CRLConfig{
+	crlConfig := &config.CRLConfigParsed{
 		WorkDir: tempDir,
 	}
 	storeType := crlstore.LevelDB
-	err, repo := NewCRLRepository(logger, crlConfig, storeType)
+	err, repo := NewCRLRepository(logger, crlConfig, storeType, "")
 	assert.NoError(t, err)
 
 	assert.NotNil(t, repo)
@@ -158,9 +158,9 @@ func TestNewCRLRepositoryOfTypeLevelDB(t *testing.T) {
 
 func TestNewCRLRepositoryOfTypeUnknown(t *testing.T) {
 	logger := zap.NewNop()
-	crlConfig := &config.CRLConfig{}
+	crlConfig := &config.CRLConfigParsed{}
 	storeType := 199
-	err, _ := NewCRLRepository(logger, crlConfig, crlstore.StoreType(storeType))
+	err, _ := NewCRLRepository(logger, crlConfig, crlstore.StoreType(storeType), "")
 	assert.Error(t, err)
 }
 
@@ -172,12 +172,12 @@ func TestAddCRL(t *testing.T) {
 	defer utils.CloseWithErrorHandling(func() error { return os.RemoveAll(tempDir) })
 
 	logger := zap.NewNop()
-	crlConfig := &config.CRLConfig{
-		WorkDir:   tempDir,
-		CDPConfig: &config.CDPConfig{CRLFetchModeParsed: config.CRLFetchModeBackground},
+	crlConfig := &config.CRLConfigParsed{
+		WorkDir:         tempDir,
+		CDPConfigParsed: &config.CDPConfigParsed{CRLFetchModeParsed: config.CRLFetchModeBackground},
 	}
 	storeType := crlstore.Map // or LevelDB
-	err, repo := NewCRLRepository(logger, crlConfig, storeType)
+	err, repo := NewCRLRepository(logger, crlConfig, storeType, "")
 	assert.NoError(t, err)
 	chains := &core.CertificateChains{}
 	crlLocations := &core.CRLLocations{CRLFile: "./test.crl"}
@@ -191,14 +191,14 @@ func TestAddCRL(t *testing.T) {
 
 func TestIsRevokedNonStrict(t *testing.T) {
 	logger := zap.NewNop()
-	crlConfig := &config.CRLConfig{
-		CDPConfig: &config.CDPConfig{
+	crlConfig := &config.CRLConfigParsed{
+		CDPConfigParsed: &config.CDPConfigParsed{
 			CRLCDPStrict: false,
 		},
 		// Set your CRLConfig properties here
 	}
 	storeType := crlstore.Map // or LevelDB
-	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger)
+	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger, "")
 	if err != nil {
 		panic(err)
 	}
@@ -224,14 +224,14 @@ func TestIsRevokedNonStrict(t *testing.T) {
 
 func TestIsRevokedStrictButNotLoaded(t *testing.T) {
 	logger := zap.NewNop()
-	crlConfig := &config.CRLConfig{
-		CDPConfig: &config.CDPConfig{
+	crlConfig := &config.CRLConfigParsed{
+		CDPConfigParsed: &config.CDPConfigParsed{
 			CRLCDPStrict: true,
 		},
 		// Set your CRLConfig properties here
 	}
 	storeType := crlstore.Map // or LevelDB
-	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger)
+	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger, "")
 	if err != nil {
 		panic(err)
 	}
@@ -257,14 +257,14 @@ func TestIsRevokedStrictButNotLoaded(t *testing.T) {
 
 func TestIsRevokedStrictLoadedWithRevokedCert(t *testing.T) {
 	logger := zap.NewNop()
-	crlConfig := &config.CRLConfig{
-		CDPConfig: &config.CDPConfig{
+	crlConfig := &config.CRLConfigParsed{
+		CDPConfigParsed: &config.CDPConfigParsed{
 			CRLCDPStrict: true,
 		},
 		// Set your CRLConfig properties here
 	}
 	storeType := crlstore.Map // or LevelDB
-	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger)
+	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger, "")
 	if err != nil {
 		panic(err)
 	}
@@ -315,14 +315,14 @@ func TestIsRevokedStrictLoadedWithRevokedCert(t *testing.T) {
 
 func TestIsRevokedStrictLoadedWithNonRevokedCert(t *testing.T) {
 	logger := zap.NewNop()
-	crlConfig := &config.CRLConfig{
-		CDPConfig: &config.CDPConfig{
+	crlConfig := &config.CRLConfigParsed{
+		CDPConfigParsed: &config.CDPConfigParsed{
 			CRLCDPStrict: true,
 		},
 		// Set your CRLConfig properties here
 	}
 	storeType := crlstore.Map // or LevelDB
-	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger)
+	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger, "")
 	if err != nil {
 		panic(err)
 	}

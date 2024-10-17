@@ -26,7 +26,7 @@ func (suite *CRLStoreSuite) SetupTest() {
 }
 
 func (suite *CRLStoreSuite) TestCreateStoreFactoryMap() {
-	factory, err := CreateStoreFactory(Map, suite.tmpDir, suite.logger)
+	factory, err := CreateStoreFactory(Map, suite.tmpDir, suite.logger, "")
 	assert.NoError(suite.T(), err)
 	assert.IsType(suite.T(), MapStoreFactory{}, factory)
 	storeFactory := factory.(MapStoreFactory)
@@ -35,7 +35,7 @@ func (suite *CRLStoreSuite) TestCreateStoreFactoryMap() {
 }
 
 func (suite *CRLStoreSuite) TestCreateStoreFactoryLevelDB() {
-	factory, err := CreateStoreFactory(LevelDB, suite.tmpDir, suite.logger)
+	factory, err := CreateStoreFactory(LevelDB, suite.tmpDir, suite.logger, "")
 	assert.NoError(suite.T(), err)
 	assert.IsType(suite.T(), LevelDbStoreFactory{}, factory)
 	storeFactory := factory.(LevelDbStoreFactory)
@@ -45,7 +45,7 @@ func (suite *CRLStoreSuite) TestCreateStoreFactoryLevelDB() {
 }
 
 func (suite *CRLStoreSuite) TestCreateStoreFactoryUnknownType() {
-	factory, err := CreateStoreFactory(10, suite.tmpDir, suite.logger)
+	factory, err := CreateStoreFactory(10, suite.tmpDir, suite.logger, "")
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), factory)
 }

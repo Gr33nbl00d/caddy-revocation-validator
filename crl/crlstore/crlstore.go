@@ -35,17 +35,19 @@ type Factory interface {
 	CreateStore(identifier string, temporary bool) (CRLStore, error)
 }
 
-func CreateStoreFactory(storeType StoreType, repoBaseDir string, logger *zap.Logger) (Factory, error) {
+func CreateStoreFactory(storeType StoreType, repoBaseDir string, logger *zap.Logger, hash string) (Factory, error) {
 	if storeType == Map {
 		return MapStoreFactory{
 			Serializer: ASN1Serializer{},
 			Logger:     logger,
+			ConfigHash: hash,
 		}, nil
 	} else if storeType == LevelDB {
 		return LevelDbStoreFactory{
 			Serializer: ASN1Serializer{},
 			BasePath:   repoBaseDir,
 			Logger:     logger,
+			ConfigHash: hash,
 		}, nil
 	} else {
 		return nil, fmt.Errorf("unknown store type %d", storeType)

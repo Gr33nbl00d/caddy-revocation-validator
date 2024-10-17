@@ -25,7 +25,7 @@ const (
 )
 
 type OCSPRevocationChecker struct {
-	ocspConfig *config.OCSPConfig
+	ocspConfig *config.OCSPConfigParsed
 	logger     *zap.Logger
 	cache      *cache2go.CacheTable
 }
@@ -122,7 +122,7 @@ func (c *OCSPRevocationChecker) parseOcspResponse(certCandidates []*core.Certifi
 	return nil, errors.New("unable to parse ocsp response with any certificate available")
 }
 
-func (c *OCSPRevocationChecker) Provision(ocspConfig *config.OCSPConfig, logger *zap.Logger) error {
+func (c *OCSPRevocationChecker) Provision(ocspConfig *config.OCSPConfigParsed, logger *zap.Logger) error {
 	c.ocspConfig = ocspConfig
 	c.logger = logger
 	return nil

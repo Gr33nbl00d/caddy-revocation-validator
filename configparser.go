@@ -1,166 +1,230 @@
 package revocation
 
 import (
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"github.com/gr33nbl00d/caddy-revocation-validator/config"
+	"go.uber.org/zap"
 	"os"
 	"time"
 )
 
 const defaultCRLUpdateInterval = 30 * time.Minute
 
-func ParseConfig(certRevocationValidator *CertRevocationValidator) error {
-	certRevocationValidator.logger.Info("parsing caddy revocation validator config")
-	if certRevocationValidator.CRLConfig != nil {
-		certRevocationValidator.logger.Info("parsing crl config")
-		err := parseCRLConfig(certRevocationValidator.CRLConfig)
+func ParseConfig(unmarshalledRevocationConfig *UnmarshalledRevocationConfig, logger *zap.Logger) (*ParsedRevocationConfig, error) {
+	logger.Info("parsing caddy revocation validator config")
+	var crlConfigParsed *config.CRLConfigParsed = nil
+	var err error = nil
+	if unmarshalledRevocationConfig.CRLConfig != nil {
+		logger.Info("parsing crl config")
+		crlConfigParsed, err = parseCRLConfig(unmarshalledRevocationConfig.CRLConfig)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	if certRevocationValidator.OCSPConfig != nil {
-		certRevocationValidator.logger.Info("parsing ocsp config")
-		err := parseOCSPConfig(certRevocationValidator.OCSPConfig)
+	var ocspConfigParsed *config.OCSPConfigParsed = &config.OCSPConfigParsed{
+		TrustedResponderCerts:      make([]*x509.Certificate, 0),
+		DefaultCacheDurationParsed: 0,
+	}
+	if unmarshalledRevocationConfig.OCSPConfig != nil {
+		logger.Info("parsing ocsp config")
+		ocspConfigParsed, err = parseOCSPConfig(unmarshalledRevocationConfig.OCSPConfig)
 		if err != nil {
-			return err
-		}
-	} else {
-		certRevocationValidator.OCSPConfig = &config.OCSPConfig{
-			TrustedResponderCertsFiles: make([]string, 0),
-			DefaultCacheDuration:       "",
-			TrustedResponderCerts:      make([]*x509.Certificate, 0),
-			DefaultCacheDurationParsed: 0,
+			return nil, err
 		}
 	}
-	certRevocationValidator.logger.Info("parsing mode")
-	err := parseMode(certRevocationValidator)
+	logger.Info("parsing mode")
+	revocationModeParsed, err := parseMode(unmarshalledRevocationConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	hash, err := calculateConfigHash(unmarshalledRevocationConfig.OCSPConfig, unmarshalledRevocationConfig.CRLConfig, unmarshalledRevocationConfig.Mode)
+	if err != nil {
+		return nil, err
+	}
+	parsedRevocationConfig := &ParsedRevocationConfig{revocationModeParsed, crlConfigParsed, ocspConfigParsed, hash}
+	return parsedRevocationConfig, nil
 }
 
-func parseMode(revocationValidator *CertRevocationValidator) error {
-	if len(revocationValidator.Mode) > 0 {
-		switch revocationValidator.Mode {
+func parseMode(cfg *UnmarshalledRevocationConfig) (config.RevocationCheckMode, error) {
+	if len(cfg.Mode) > 0 {
+		switch cfg.Mode {
 		case "prefer_crl":
-			revocationValidator.ModeParsed = config.RevocationCheckModePreferCRL
+			return config.RevocationCheckModePreferCRL, nil
 		case "prefer_ocsp":
-			revocationValidator.ModeParsed = config.RevocationCheckModePreferOCSP
+			return config.RevocationCheckModePreferOCSP, nil
 		case "ocsp_only":
-			revocationValidator.ModeParsed = config.RevocationCheckModeOCSPOnly
+			return config.RevocationCheckModeOCSPOnly, nil
 		case "crl_only":
-			revocationValidator.ModeParsed = config.RevocationCheckModeCRLOnly
+			return config.RevocationCheckModeCRLOnly, nil
 		case "disabled":
-			revocationValidator.ModeParsed = config.RevocationCheckModeDisabled
+			return config.RevocationCheckModeDisabled, nil
 		default:
-			return fmt.Errorf("mode not recognized: %s", revocationValidator.Mode)
+			return 0, fmt.Errorf("mode not recognized: %s", cfg.Mode)
 		}
 	} else {
-		revocationValidator.ModeParsed = config.RevocationCheckModePreferOCSP
+		return config.RevocationCheckModePreferOCSP, nil
 	}
-	return nil
-
 }
 
-func parseCDPConfig(cdpConfig *config.CDPConfig) error {
+func parseCDPConfig(cdpConfig *config.CDPConfig) (*config.CDPConfigParsed, error) {
+
+	fetchModeParsed := config.CRLFetchModeActively
 	if len(cdpConfig.CRLFetchMode) > 0 {
 		switch cdpConfig.CRLFetchMode {
 		case "fetch_actively":
-			cdpConfig.CRLFetchModeParsed = config.CRLFetchModeActively
+			fetchModeParsed = config.CRLFetchModeActively
 		case "fetch_background":
-			cdpConfig.CRLFetchModeParsed = config.CRLFetchModeBackground
+			fetchModeParsed = config.CRLFetchModeBackground
 		default:
-			return fmt.Errorf("crl_fetch_mode not recognized: %s", cdpConfig.CRLFetchMode)
+			return nil, fmt.Errorf("crl_fetch_mode not recognized: %s", cdpConfig.CRLFetchMode)
 		}
-	} else {
-		cdpConfig.CRLFetchModeParsed = config.CRLFetchModeActively
 	}
-	return nil
+	return &config.CDPConfigParsed{fetchModeParsed, cdpConfig.CRLCDPStrict}, nil
 }
 
-func parseCRLConfig(crlConfig *config.CRLConfig) error {
-	err := parseSignatureValidationMode(crlConfig)
+func parseCRLConfig(crlConfig *config.CRLConfig) (*config.CRLConfigParsed, error) {
+
+	var err error = nil
+	signatureValidationMode, err := parseSignatureValidationMode(crlConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	err = parseStorageType(crlConfig)
+	storageType, err := parseStorageType(crlConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	err = parseUpdateInterval(crlConfig)
+	updateInterval, err := parseUpdateInterval(crlConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	err = parseTrustedCrlSignerCerts(crlConfig)
+	trustedCrlSignatureCerts, err := parseTrustedCrlSignerCerts(crlConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	cdpConfigParsed := &config.CDPConfigParsed{
+		CRLFetchModeParsed: config.CRLFetchModeActively,
+		CRLCDPStrict:       false,
+	}
+
 	if crlConfig.CDPConfig != nil {
-		err := parseCDPConfig(crlConfig.CDPConfig)
+		cdpConfigParsed, err = parseCDPConfig(crlConfig.CDPConfig)
 		if err != nil {
-			return err
-		}
-	} else {
-		crlConfig.CDPConfig = &config.CDPConfig{
-			CRLFetchMode:       "",
-			CRLFetchModeParsed: config.CRLFetchModeActively,
-			CRLCDPStrict:       false,
+			return nil, err
 		}
 	}
-	return nil
+
+	crlConfigParsed := &config.CRLConfigParsed{signatureValidationMode, storageType, trustedCrlSignatureCerts, updateInterval, cdpConfigParsed, crlConfig.WorkDir, crlConfig.CRLUrls, crlConfig.CRLFiles}
+	return crlConfigParsed, nil
 }
 
-func parseOCSPConfig(ocspConfig *config.OCSPConfig) error {
-	err := parseDefaultCacheDuration(ocspConfig)
+func calculateConfigHash(ocspConfig *config.OCSPConfig, crlConfig *config.CRLConfig, mode string) (string, error) {
+	ocspHash, err := calculateOcspConfigHash(ocspConfig)
 	if err != nil {
-		return err
+		return "", err
 	}
-	err = parseTrustedOcspResponderCerts(ocspConfig)
+
+	crlHash, err := calculateCrlConfigHash(crlConfig)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	hash := sha256.New()
+	_, err = hash.Write([]byte(mode))
+	if err != nil {
+		return "", err
+	}
+	_, err = hash.Write([]byte(crlHash))
+	if err != nil {
+		return "", err
+	}
+
+	_, err = hash.Write([]byte(ocspHash))
+	if err != nil {
+		return "", err
+	}
+	sum := hash.Sum(nil)
+	return hex.EncodeToString(sum), nil
+}
+func calculateCrlConfigHash(cfg *config.CRLConfig) (string, error) {
+	jsonData, err := json.Marshal(cfg)
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.New()
+	_, err = hash.Write(jsonData)
+	if err != nil {
+		return "", err
+	}
+	sum := hash.Sum(nil)
+	return hex.EncodeToString(sum), nil
 }
 
-func parseTrustedOcspResponderCerts(ocspConfig *config.OCSPConfig) error {
-	ocspConfig.TrustedResponderCerts = make([]*x509.Certificate, 0)
+func calculateOcspConfigHash(cfg *config.OCSPConfig) (string, error) {
+	jsonData, err := json.Marshal(cfg)
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.New()
+	_, err = hash.Write(jsonData)
+	if err != nil {
+		return "", err
+	}
+	sum := hash.Sum(nil)
+	return hex.EncodeToString(sum), nil
+}
+
+func parseOCSPConfig(ocspConfig *config.OCSPConfig) (*config.OCSPConfigParsed, error) {
+
+	defaultCacheDuration, err := parseDefaultCacheDuration(ocspConfig)
+	if err != nil {
+		return nil, err
+	}
+	trustedResponderCerts, err := parseTrustedOcspResponderCerts(ocspConfig)
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &config.OCSPConfigParsed{trustedResponderCerts, defaultCacheDuration, ocspConfig.OCSPAIAStrict}, nil
+}
+
+func parseTrustedOcspResponderCerts(ocspConfig *config.OCSPConfig) ([]*x509.Certificate, error) {
+	trustedResponderCerts := make([]*x509.Certificate, 0)
 	for _, certFile := range ocspConfig.TrustedResponderCertsFiles {
 		certificate, err := parseCertFromFile(certFile)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		ocspConfig.TrustedResponderCerts = append(ocspConfig.TrustedResponderCerts, certificate)
+		trustedResponderCerts = append(trustedResponderCerts, certificate)
 	}
-	return nil
+	return trustedResponderCerts, nil
 }
 
-func parseDefaultCacheDuration(ocspConfig *config.OCSPConfig) error {
+func parseDefaultCacheDuration(ocspConfig *config.OCSPConfig) (time.Duration, error) {
 	if len(ocspConfig.DefaultCacheDuration) > 0 {
-		duration, err := time.ParseDuration(ocspConfig.DefaultCacheDuration)
-		if err != nil {
-			return err
-		}
-		ocspConfig.DefaultCacheDurationParsed = duration
+		return time.ParseDuration(ocspConfig.DefaultCacheDuration)
 	} else {
-		ocspConfig.DefaultCacheDurationParsed = time.Duration(0)
+		return time.Duration(0), nil
 	}
-	return nil
 }
 
-func parseTrustedCrlSignerCerts(crlConfig *config.CRLConfig) error {
-	crlConfig.TrustedSignatureCerts = make([]*x509.Certificate, 0)
+func parseTrustedCrlSignerCerts(crlConfig *config.CRLConfig) ([]*x509.Certificate, error) {
+	trustedSignatureCerts := make([]*x509.Certificate, 0)
 	for _, certFile := range crlConfig.TrustedSignatureCertsFiles {
 		certificate, err := parseCertFromFile(certFile)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		crlConfig.TrustedSignatureCerts = append(crlConfig.TrustedSignatureCerts, certificate)
+		trustedSignatureCerts = append(trustedSignatureCerts, certificate)
 	}
-	return nil
+	return trustedSignatureCerts, nil
 }
 
 func parseCertFromFile(certFile string) (*x509.Certificate, error) {
@@ -179,49 +243,46 @@ func parseCertFromFile(certFile string) (*x509.Certificate, error) {
 	return certificate, nil
 }
 
-func parseSignatureValidationMode(crlCfg *config.CRLConfig) error {
+func parseSignatureValidationMode(crlCfg *config.CRLConfig) (config.SignatureValidationMode, error) {
 	if len(crlCfg.SignatureValidationMode) > 0 {
 		switch crlCfg.SignatureValidationMode {
 		case "none":
-			crlCfg.SignatureValidationModeParsed = config.SignatureValidationModeNone
+			return config.SignatureValidationModeNone, nil
 		case "verify_log":
-			crlCfg.SignatureValidationModeParsed = config.SignatureValidationModeVerifyLog
+			return config.SignatureValidationModeVerifyLog, nil
 		case "verify":
-			crlCfg.SignatureValidationModeParsed = config.SignatureValidationModeVerify
+			return config.SignatureValidationModeVerify, nil
 		default:
-			return fmt.Errorf("signature_validation_mode not recognized: %s", crlCfg.SignatureValidationMode)
+			return 0, fmt.Errorf("signature_validation_mode not recognized: %s", crlCfg.SignatureValidationMode)
 		}
 	} else {
-		crlCfg.SignatureValidationModeParsed = config.SignatureValidationModeVerify
+		return config.SignatureValidationModeVerify, nil
 	}
-	return nil
 }
 
-func parseStorageType(crlCfg *config.CRLConfig) error {
+func parseStorageType(crlCfg *config.CRLConfig) (config.StorageType, error) {
 	if len(crlCfg.StorageType) > 0 {
 		switch crlCfg.StorageType {
 		case "memory":
-			crlCfg.StorageTypeParsed = config.Memory
+			return config.Memory, nil
 		case "disk":
-			crlCfg.StorageTypeParsed = config.Disk
+			return config.Disk, nil
 		default:
-			return fmt.Errorf("storage_type not recognized: %s", crlCfg.StorageType)
+			return 0, fmt.Errorf("storage_type not recognized: %s", crlCfg.StorageType)
 		}
 	} else {
-		crlCfg.StorageTypeParsed = config.Disk
+		return config.Disk, nil
 	}
-	return nil
 }
 
-func parseUpdateInterval(config *config.CRLConfig) error {
+func parseUpdateInterval(config *config.CRLConfig) (time.Duration, error) {
 	if len(config.UpdateInterval) > 0 {
 		duration, err := time.ParseDuration(config.UpdateInterval)
 		if err != nil {
-			return err
+			return 0, err
 		}
-		config.UpdateIntervalParsed = duration
+		return duration, nil
 	} else {
-		config.UpdateIntervalParsed = defaultCRLUpdateInterval
+		return defaultCRLUpdateInterval, nil
 	}
-	return nil
 }

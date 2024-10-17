@@ -176,6 +176,7 @@ func (S *MapStore) close() {
 type MapStoreFactory struct {
 	Serializer Serializer
 	Logger     *zap.Logger
+	ConfigHash string
 }
 
 func (F MapStoreFactory) CreateStore(_ string, _ bool) (CRLStore, error) {

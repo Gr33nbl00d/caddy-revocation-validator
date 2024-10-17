@@ -8,8 +8,6 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
 	"github.com/gr33nbl00d/caddy-revocation-validator/config"
-	"github.com/gr33nbl00d/caddy-revocation-validator/crl"
-	"github.com/gr33nbl00d/caddy-revocation-validator/ocsp"
 	"go.uber.org/zap"
 	"os"
 )
@@ -27,12 +25,10 @@ type CertRevocationValidator struct {
 	// CRLConfig Contains the certificate revocation list configuration (Optional)
 	CRLConfig *config.CRLConfig `json:"crl_config,omitempty"`
 	// OCSPConfig Contains the Online Certificate Status Protocol configuration (Optional)
-	OCSPConfig            *config.OCSPConfig `json:"ocsp_config,omitempty"`
-	logger                *zap.Logger
-	ctx                   caddy.Context
-	crlRevocationChecker  *crl.CRLRevocationChecker
-	ocspRevocationChecker *ocsp.OCSPRevocationChecker
-	ModeParsed            config.RevocationCheckMode `json:"-"`
+	OCSPConfig             *config.OCSPConfig `json:"ocsp_config,omitempty"`
+	logger                 *zap.Logger
+	ctx                    caddy.Context
+	parsedRevocationConfig *ParsedRevocationConfig
 }
 
 func (c *CertRevocationValidator) CaddyModule() caddy.ModuleInfo {
@@ -49,52 +45,42 @@ func (c *CertRevocationValidator) Provision(ctx caddy.Context) error {
 	c.ctx = ctx
 	c.logger = ctx.Logger(c)
 	c.logger.Info("start provisioning of caddy revocation validator")
-	if isCRLCheckingEnabled(c) {
-		c.crlRevocationChecker = &crl.CRLRevocationChecker{}
-	}
-	c.ocspRevocationChecker = &ocsp.OCSPRevocationChecker{}
-	err := ParseConfig(c)
+	unmarshalledRevocationConfig := &UnmarshalledRevocationConfig{c.Mode, c.CRLConfig, c.OCSPConfig}
+	parsedRevocationConfig, err := ParseConfig(unmarshalledRevocationConfig, c.logger)
+	c.parsedRevocationConfig = parsedRevocationConfig
 	if err != nil {
 		return err
 	}
+
 	c.logger.Info("validating Config")
-	err = validateConfig(c)
+	err = validateConfig(parsedRevocationConfig)
 	if err != nil {
 		return err
 	}
-	if isCRLCheckingEnabled(c) {
-		c.logger.Info("crl checking was enabled start CRL provisioning")
-		err = c.crlRevocationChecker.Provision(c.CRLConfig, c.logger)
-		if err != nil {
-			return err
-		}
-	}
-	c.logger.Info("start ocsp provisioning")
-	err = c.ocspRevocationChecker.Provision(c.OCSPConfig, c.logger)
-	if err != nil {
-		return err
-	}
+
+	RevocationCheckerRepositoryInstance.Provision(ctx, c.logger, c.parsedRevocationConfig)
+
 	c.logger.Info("finished provisioning of caddy revocation validator")
 	return nil
 }
 
-func validateConfig(c *CertRevocationValidator) error {
+func validateConfig(c *ParsedRevocationConfig) error {
 	if c.ModeParsed == config.RevocationCheckModeDisabled {
 		return nil
 	}
-	if isCRLCheckingEnabled(c) {
-		if c.CRLConfig == nil {
+	if c.IsCRLCheckingEnabled() {
+		if c.CRLConfigParsed == nil {
 			return errors.New("for CRL checking a working directory need to be defined in crl_config")
 		} else {
-			if c.CRLConfig.WorkDir == "" {
+			if c.CRLConfigParsed.WorkDir == "" {
 				return errors.New("for CRL checking a working directory need to be defined in crl_config")
 			}
-			stat, err := os.Stat(c.CRLConfig.WorkDir)
+			stat, err := os.Stat(c.CRLConfigParsed.WorkDir)
 			if err != nil {
 				return fmt.Errorf("error accessing working directory information %v", err)
 			}
 			if stat.IsDir() == false {
-				return fmt.Errorf("working directory is not a directory %v", c.CRLConfig.WorkDir)
+				return fmt.Errorf("working directory is not a directory %v", c.CRLConfigParsed.WorkDir)
 			}
 		}
 	}
@@ -102,66 +88,22 @@ func validateConfig(c *CertRevocationValidator) error {
 }
 
 func (c *CertRevocationValidator) Cleanup() error {
-	if isCRLCheckingEnabled(c) {
-		err := c.crlRevocationChecker.Cleanup()
-		if err != nil {
-			return err
-		}
-	}
-	err := c.ocspRevocationChecker.Cleanup()
-	if err != nil {
-		return err
-	}
-	return nil
+	return RevocationCheckerRepositoryInstance.Cleanup(c.parsedRevocationConfig)
 }
 
 func (c *CertRevocationValidator) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	caddyConfig, err := parseConfigFromCaddyfile(d)
+	unmarshalledConfig, err := parseConfigFromCaddyfile(d)
 	if err != nil {
 		return err
 	}
-	c.OCSPConfig = caddyConfig.OCSPConfig
-	c.CRLConfig = caddyConfig.CRLConfig
-	c.Mode = caddyConfig.Mode
-	err = validateConfig(c)
-	if err != nil {
-		return err
-	}
+	c.OCSPConfig = unmarshalledConfig.OCSPConfig
+	c.CRLConfig = unmarshalledConfig.CRLConfig
+	c.Mode = unmarshalledConfig.Mode
 	return nil
 }
 
-func (c *CertRevocationValidator) VerifyClientCertificate(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
-	if len(verifiedChains) > 0 {
-		clientCertificate := verifiedChains[0][0]
-		if isOCSPCheckingEnabled(c) {
-			revoked, err := c.ocspRevocationChecker.IsRevoked(clientCertificate, verifiedChains)
-			if err != nil {
-				return err
-			}
-			if revoked.Revoked {
-				return errors.New("client certificate was revoked")
-			}
-		}
-		if isCRLCheckingEnabled(c) {
-			revoked, err := c.crlRevocationChecker.IsRevoked(clientCertificate, verifiedChains)
-			if err != nil {
-				return err
-			}
-			if revoked.Revoked {
-				return errors.New("client certificate was revoked")
-			}
-		}
-
-	}
-	return nil
-}
-
-func isOCSPCheckingEnabled(c *CertRevocationValidator) bool {
-	return c.ModeParsed == config.RevocationCheckModePreferCRL || c.ModeParsed == config.RevocationCheckModePreferOCSP || c.ModeParsed == config.RevocationCheckModeOCSPOnly
-}
-
-func isCRLCheckingEnabled(c *CertRevocationValidator) bool {
-	return c.ModeParsed == config.RevocationCheckModePreferCRL || c.ModeParsed == config.RevocationCheckModePreferOCSP || c.ModeParsed == config.RevocationCheckModeCRLOnly
+func (c *CertRevocationValidator) VerifyClientCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+	return RevocationCheckerRepositoryInstance.VerifyClientCertificate(c.parsedRevocationConfig, rawCerts, verifiedChains)
 }
 
 // Interface guards

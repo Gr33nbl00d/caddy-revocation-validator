@@ -22,7 +22,7 @@ type Repository struct {
 	Factory           crlstore.Factory
 	crlRepositoryLock *sync.RWMutex
 	crlRepository     map[string]*Entry
-	crlConfig         *config.CRLConfig
+	crlConfig         *config.CRLConfigParsed
 	logger            *zap.Logger
 	crlLoaderFactory  crlloader.CRLLoaderFactory
 	crlReader         crlreader.CRLReader
@@ -39,8 +39,8 @@ type Entry struct {
 	Chains *core.CertificateChains
 }
 
-func NewCRLRepository(logger *zap.Logger, crlConfig *config.CRLConfig, storeType crlstore.StoreType) (error, *Repository) {
-	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger)
+func NewCRLRepository(logger *zap.Logger, crlConfig *config.CRLConfigParsed, storeType crlstore.StoreType, configHash string) (error, *Repository) {
+	factory, err := crlstore.CreateStoreFactory(storeType, crlConfig.WorkDir, logger, configHash)
 	if err != nil {
 		return err, nil
 	}
@@ -68,7 +68,7 @@ func (R *Repository) AddCRL(crlLocations *core.CRLLocations, chains *core.Certif
 	if err != nil {
 		return false, err
 	}
-	if R.crlConfig.CDPConfig.CRLFetchModeParsed == config.CRLFetchModeActively {
+	if R.crlConfig.CDPConfigParsed.CRLFetchModeParsed == config.CRLFetchModeActively {
 		if R.isEntryLoaded(entry) == false {
 			return crlAdded, R.loadActively(entry, chains, crlLocations)
 		}
@@ -203,7 +203,7 @@ func (R *Repository) IsRevoked(certificate *x509.Certificate, locations *core.CR
 			return nil, err
 		}
 		//In strict mode enforce CDP CRL is loaded otherwise abort
-		if R.crlConfig.CDPConfig.CRLCDPStrict && R.isEntryPresentAndLoaded(identifier) == false {
+		if R.crlConfig.CDPConfigParsed.CRLCDPStrict && R.isEntryPresentAndLoaded(identifier) == false {
 			return nil, fmt.Errorf("CRL defined in CDP was not loaded")
 		}
 	}
@@ -337,14 +337,16 @@ func (R *Repository) updateCrlEntry(entry *Entry, newChains *core.CertificateCha
 	signatureCert, err := verifyCRLSignature(result, chains)
 	if err != nil {
 		R.setLastSignatureVerifyFailed(entry, result)
-		return err
+		R.logger.Warn("could not validate signature of crl", zap.String("crl", entry.CRLLoader.GetDescription()))
+		if R.crlConfig.SignatureValidationModeParsed == config.SignatureValidationModeVerify {
+			return err
+		}
 	} else {
 		R.resetLastSignatureVerifyFailed(entry)
-	}
-
-	err = processor.UpdateSignatureCertificate(signatureCert)
-	if err != nil {
-		return err
+		err = processor.UpdateSignatureCertificate(signatureCert)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = R.updateEntry(entry, err, store)

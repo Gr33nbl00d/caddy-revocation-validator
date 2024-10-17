@@ -259,12 +259,15 @@ type LevelDbStoreFactory struct {
 	Serializer Serializer
 	BasePath   string
 	Logger     *zap.Logger
+	ConfigHash string
 }
 
 func (F LevelDbStoreFactory) CreateStore(identifier string, temporary bool) (CRLStore, error) {
-	levelDBPath := filepath.Join(F.BasePath, identifier)
+	finalBasePath := filepath.Join(F.BasePath, F.ConfigHash)
+	levelDBPath := filepath.Join(finalBasePath, identifier)
 	if temporary {
-		dir, err := createTempDirWithRetries(F.BasePath, F.Logger)
+		levelDBTempPath := filepath.Join(finalBasePath)
+		dir, err := createTempDirWithRetries(levelDBTempPath, F.Logger)
 		if err != nil {
 			return nil, err
 		}
@@ -283,7 +286,7 @@ func (F LevelDbStoreFactory) CreateStore(identifier string, temporary bool) (CRL
 		Db:          db,
 		Serializer:  F.Serializer,
 		Identifier:  identifier,
-		BasePath:    F.BasePath,
+		BasePath:    finalBasePath,
 		LevelDBPath: levelDBPath,
 		Logger:      F.Logger,
 	}, nil

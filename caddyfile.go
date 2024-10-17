@@ -6,13 +6,7 @@ import (
 	"strconv"
 )
 
-type CertRevocationValidatorConfig struct {
-	CRLConfig  *config.CRLConfig
-	OCSPConfig *config.OCSPConfig
-	Mode       string
-}
-
-func parseConfigFromCaddyfile(d *caddyfile.Dispenser) (*CertRevocationValidatorConfig, error) {
+func parseConfigFromCaddyfile(d *caddyfile.Dispenser) (*UnmarshalledRevocationConfig, error) {
 	// initialize structs
 	crlConfig := config.CRLConfig{
 		CDPConfig:                  &config.CDPConfig{},
@@ -23,7 +17,7 @@ func parseConfigFromCaddyfile(d *caddyfile.Dispenser) (*CertRevocationValidatorC
 	ocspConfig := config.OCSPConfig{
 		TrustedResponderCertsFiles: []string{},
 	}
-	certRevocationValidatorConfig := CertRevocationValidatorConfig{
+	certRevocationValidatorConfig := UnmarshalledRevocationConfig{
 		OCSPConfig: &ocspConfig,
 		CRLConfig:  &crlConfig,
 	}
@@ -40,7 +34,7 @@ func parseConfigFromCaddyfile(d *caddyfile.Dispenser) (*CertRevocationValidatorC
 	return &certRevocationValidatorConfig, nil
 }
 
-func parseConfigEntryFromCaddyfile(d *caddyfile.Dispenser, key string, certRevocationValidatorConfig CertRevocationValidatorConfig) (*CertRevocationValidatorConfig, error, bool) {
+func parseConfigEntryFromCaddyfile(d *caddyfile.Dispenser, key string, certRevocationValidatorConfig UnmarshalledRevocationConfig) (*UnmarshalledRevocationConfig, error, bool) {
 	switch key {
 	case "mode":
 		if !d.NextArg() {
