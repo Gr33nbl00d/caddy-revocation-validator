@@ -34,6 +34,7 @@ func (c *RevocationCheckerRepository) Provision(ctx caddy.Context, logger *zap.L
 	defer c.repositoryMutex.Unlock()
 	entry := c.crlRevocationCheckerRepository[config.ConfigHash]
 	if entry == nil {
+		logger.Info("starting provision of revocation config id: " + config.ConfigHash)
 		checker := &RevocationChecker{}
 		err := checker.Provision(ctx, logger, config)
 		if err != nil {
