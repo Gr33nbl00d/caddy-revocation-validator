@@ -1,9 +1,10 @@
 package revocation
 
 import (
+	"strconv"
+
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/gr33nbl00d/caddy-revocation-validator/config"
-	"strconv"
 )
 
 type CertRevocationValidatorConfig struct {
@@ -132,6 +133,12 @@ func parseCaddyFileCrlConfigEntry(d *caddyfile.Dispenser, crlConfig config.CRLCo
 		}
 
 		crlConfig.SignatureValidationMode = d.Val()
+	case "crl_urls":
+		args := d.RemainingArgs()
+		if len(args) == 0 {
+			return nil, d.ArgErr(), true
+		}
+		crlConfig.CRLUrls = append(crlConfig.CRLUrls, args...)
 	case "crl_url":
 		if !d.NextArg() {
 			return nil, d.ArgErr(), true
