@@ -86,6 +86,9 @@ Minimal JSON config for OCSP and CRL support via CDP/AIA
 Revocation check support can be also configured in the caddyfile syntax:
 
 # Example caddyfile config
+Not to caddyfile config: Json Array structures like "crl_urls" or "crl_files" are represented in caddyfile by multiple "crl_url" or "crl_file" entries.
+This is the standard way in caddyfile to represent arrays or lists. As the caddyfile has no native "array/list" support to keep it simple.
+Dont try to use "crl_files" or "crl_urls" keyword in caddyfile. Instead use multiple "crl_url" entries. They will be joined to an array automatically.
 ```
 client_auth {
   mode require_and_verify
