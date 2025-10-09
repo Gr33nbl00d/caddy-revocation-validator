@@ -33,6 +33,8 @@ jobs:
             SUCCESS: 'True'
 
     runs-on: ${{ matrix.os }}
+    env:
+      GOTOOLCHAIN: local   # verhindert automatisches Nachladen anderer Patch-Versionen
 
     steps:
       - uses: actions/checkout@v3
@@ -40,8 +42,16 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.25
-          GO_SEMVER: '1.25.2'
+          go-version: ${{ matrix.GO_SEMVER }}   # vorher: 1.25 (führt zu Patch-Mix)
+
+      - name: Verify Go
+        run: |
+          go version
+          go env GOTOOLCHAIN
+
+      - name: Clean stale caches
+        run: go clean -cache -testcache
+
       - name: Build
         run: go build -v ./...
 

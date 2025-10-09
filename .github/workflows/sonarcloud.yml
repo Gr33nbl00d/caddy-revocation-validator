@@ -37,6 +37,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: read
   pull-requests: read # allows SonarCloud to decorate PRs with analysis results
 
 jobs:
@@ -59,16 +60,17 @@ jobs:
 
         # You can pin the exact commit or the version.
         # uses: SonarSource/sonarcloud-github-action@de2e56b42aa84d0b1c5b622644ac17e505c9a049        
-        uses: SonarSource/sonarcloud-github-action@v2.1.1
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Generate a token on Sonarcloud.io, add it to the secrets of this repo with the name SONAR_TOKEN (Settings > Secrets > Actions > add new repository secret)
         with:
           # Additional arguments for the sonarcloud scanner
-          args:
+          args: >
             # Unique keys of your project and organization. You can find them in SonarCloud > Information (bottom-left menu)
             # mandatory
             -Dsonar.projectKey=Gr33nbl00d_caddy-revocation-validator
+            -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.organization=gr33nbl00d
             -Dsonar.sources=.
             -Dsonar.sources.inclusions=**/*.go
