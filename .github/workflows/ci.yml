@@ -9,13 +9,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-        go: [ '1.21']
+        go: [ '1.25']
 
         include:
           # Set the minimum Go patch version for the given Go minor
           # Usable via ${{ matrix.GO_SEMVER }}
-          - go: '1.21'
-            GO_SEMVER: '1.21.7'
+          - go: '1.25'
+            GO_SEMVER: '1.25.2'
 
           # Set some variables per OS, usable via ${{ matrix.VAR }}
           # CADDY_BIN_PATH: the path to the compiled Caddy binary, for artifact publishing
@@ -40,7 +40,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.21
+          go-version: 1.25
 
       - name: Build
         run: go build -v ./...
