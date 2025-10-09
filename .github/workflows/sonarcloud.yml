@@ -43,7 +43,8 @@ permissions:
 jobs:
   Analysis:
     runs-on: ubuntu-latest
-    GOTOOLCHAIN: go1.25.2+auto
+    env:
+      GOTOOLCHAIN: go1.25.2+auto
 
     steps:
       - uses: actions/checkout@v4
