@@ -3,6 +3,7 @@ package revocation
 import (
 	"crypto/x509"
 	"errors"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/gr33nbl00d/caddy-revocation-validator/crl"
 	"github.com/gr33nbl00d/caddy-revocation-validator/ocsp"
@@ -40,7 +41,7 @@ func (c *RevocationChecker) Provision(ctx caddy.Context, logger *zap.Logger, rev
 func (c *RevocationChecker) VerifyClientCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 	if len(verifiedChains) > 0 {
 		clientCertificate := verifiedChains[0][0]
-		if c.RevocationConfig.IsCRLCheckingEnabled() {
+		if c.RevocationConfig.IsOCSPCheckingEnabled() {
 			revoked, err := c.ocspRevocationChecker.IsRevoked(clientCertificate, verifiedChains)
 			if err != nil {
 				return err
