@@ -96,6 +96,14 @@ func (suite *ExtensionsupportTestSuite) TestFindExtension() {
 	suite.Require().Nil(extension)
 }
 
+// A crl without any extensions at all is parsed into a nil extension list.
+// Looking for an extension in it must not panic.
+func (suite *ExtensionsupportTestSuite) TestFindExtensionWithoutExtensions() {
+	oidToFind := "2.5.29.35"
+	extension := FindExtension(oidToFind, nil)
+	suite.Require().Nil(extension)
+}
+
 func TestExtensionsupportTestSuite(t *testing.T) {
 	suite.Run(t, new(ExtensionsupportTestSuite))
 }

@@ -57,3 +57,21 @@ func TestReadCRLWithoutExtensions(t *testing.T) {
 	t.Logf("%v", result)
 	t.Log(err)
 }
+
+// A crl without any extensions at all has no extension list at all. Looking
+// for the certificate that signed it must not panic.
+func TestFindCertificateIssuerCandidatesOfCRLWithoutExtensions(t *testing.T) {
+	reader := StreamingCRLFileReader{}
+	result, err := reader.ReadCRL(CRLPersisterProcessorMock{}, testhelper.GetTestDataFilePath("canoext.crl"))
+	assert.Nil(t, err)
+	assert.Nil(t, result.CRLExtensions)
+
+	chains := &revocation.CertificateChains{}
+	candidates, err := revocation.FindCertificateIssuerCandidates(
+		result.Issuer,
+		result.CRLExtensions,
+		result.HashAndVerifyStrategy.VerifyStrategy.GetAlgorithmID(),
+		chains)
+	assert.Nil(t, err)
+	assert.Len(t, candidates, 0)
+}
