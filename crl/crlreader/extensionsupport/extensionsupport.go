@@ -38,6 +38,9 @@ var handledCRLExtensions = map[string]bool{
 }
 
 func FindExtension(oidString string, extensions *[]pkix.Extension) *pkix.Extension {
+	if extensions == nil {
+		return nil
+	}
 	for _, extension := range *extensions {
 		if extension.Id.String() == oidString {
 			return &extension

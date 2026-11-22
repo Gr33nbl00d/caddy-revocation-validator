@@ -160,6 +160,63 @@ func TestFindCertificateIssuerCandidatesByIssuerAndAlgorithmWithOneNotMatching(t
 	}
 }
 
+// A crl without any extensions at all is parsed into a nil extension list.
+// Looking for the authority key identifier in it must not panic, the issuer
+// has to be looked up by name and algorithm instead.
+func TestFindCertificateIssuerCandidatesWithoutExtensions(t *testing.T) {
+	// Create a sample issuer RDNSequence
+	issuer := &pkix.RDNSequence{
+		pkix.RelativeDistinguishedNameSET{
+			pkix.AttributeTypeAndValue{
+				Type:  asn1.ObjectIdentifier{2, 5, 4, 3}, // OID for CommonName
+				Value: "Test Issuer",
+			},
+		},
+	}
+
+	// Define the expected public key algorithm
+	algorithmID := x509.RSA
+
+	// Create a sample chain entry with a correctly encoded RawSubject
+	subjectBytes, err := asn1.Marshal(*issuer)
+	if err != nil {
+		t.Fatalf("Error encoding subject: %v", err)
+	}
+	chainEntry := &CertificateChainEntry{
+		RawCertificate: []byte("sample_certificate"),
+		Certificate: &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: "example.com",
+			},
+			RawSubject:         subjectBytes,
+			PublicKeyAlgorithm: x509.RSA,
+		},
+	}
+
+	// Create a CertificateChain instance and add the chain entry to it
+	chain := &CertificateChain{}
+	chain.AddCertificateChainEntry(chainEntry)
+
+	// Create a CertificateChains instance and add the chain to it
+	chains := &CertificateChains{}
+	chains.AddCertificateChain(*chain)
+
+	// Test the function, the extension list of a crl without extensions is nil
+	candidates, err := FindCertificateIssuerCandidates(issuer, nil, algorithmID, chains)
+	if err != nil {
+		t.Fatalf("Error in FindCertificateIssuerCandidates: %v", err)
+	}
+
+	// The issuer has to be found by name and algorithm
+	if len(candidates) != 1 {
+		t.Errorf("Expected 1 candidate, but got %d", len(candidates))
+	}
+
+	if candidates[0].Certificate.Subject.CommonName != "example.com" {
+		t.Errorf("Expected CommonName to be '%s', but got '%s'", "example.com", candidates[0].Certificate.Subject.CommonName)
+	}
+}
+
 func TestFindCertificateIssuerWithWrongRDNSequenceBytes(t *testing.T) {
 	// Create a sample issuer RDNSequence
 	issuer := &pkix.RDNSequence{
